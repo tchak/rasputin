@@ -3165,17 +3165,48 @@ var normalizePath = SC.normalizePath;
 
 var suspended = 0;
 
-var queue = [], queueSet = {};
-function notifyObservers(obj, eventName) {
-  if (suspended) {
-    
+var ObserverSet = function(iterateable) {
+  this.set = {};
+  if (iterateable) { this.array = []; }
+}
+
+ObserverSet.prototype.add = function(target, name) {
+  var set = this.set, guid = SC.guidFor(target), array;
+
+  if (!set[guid]) { set[guid] = {}; }
+  set[guid][name] = true;
+  if (array = this.array) {
+    array.push([target, name]);
+  }
+};
+
+ObserverSet.prototype.contains = function(target, name) {
+  var set = this.set, guid = SC.guidFor(target), nameSet = set[guid];
+  return nameSet && nameSet[name];
+};
+
+ObserverSet.prototype.empty = function() {
+  this.set = {};
+  this.array = [];
+};
+
+ObserverSet.prototype.forEach = function(fn) {
+  var q = this.array;
+  this.empty();
+  q.forEach(function(item) {
+    fn(item[0], item[1]);
+  });
+};
+
+var queue = new ObserverSet(true), beforeObserverSet = new ObserverSet();
+
+function notifyObservers(obj, eventName, forceNotification) {
+  if (suspended && !forceNotification) {
+
     // if suspended add to the queue to send event later - but only send 
     // event once.
-    var guid = guidFor(obj);
-    if (!queueSet[guid]) queueSet[guid] = {};
-    if (!queueSet[guid][eventName]) {
-      queueSet[guid][eventName] = true;
-      queue.push([obj, eventName]);
+    if (!queue.contains(obj, eventName)) {
+      queue.add(obj, eventName);
     }
 
   } else {
@@ -3184,10 +3215,10 @@ function notifyObservers(obj, eventName) {
 }
 
 function flushObserverQueue() {
-  if (!queue || queue.length===0) return ;
-  var q = queue;
-  queue = []; queueSet = {};
-  q.forEach(function(x){ SC.sendEvent(x[0], x[1]); });
+  beforeObserverSet.empty();
+
+  if (!queue || queue.array.length===0) return ;
+  queue.forEach(function(target, event){ SC.sendEvent(target, event); });
 }
 
 SC.beginPropertyChanges = function() {
@@ -3273,7 +3304,18 @@ SC.notifyObservers = function(obj, keyName) {
 
 /** @private */
 SC.notifyBeforeObservers = function(obj, keyName) {
-  notifyObservers(obj, beforeEvent(keyName));
+  var guid, set, forceNotification = false;
+
+  if (suspended) {
+    if (!beforeObserverSet.contains(obj, keyName)) {
+      beforeObserverSet.add(obj, keyName);
+      forceNotification = true;
+    } else {
+      return;
+    }
+  }
+
+  notifyObservers(obj, beforeEvent(keyName), forceNotification);
 };
 
 
@@ -9431,17 +9473,14 @@ var get = SC.get, set = SC.set;
 /**
   @class
 
-  SC.RenderBuffer gathers information regarding the a view and generates the 
+  SC.RenderBuffer gathers information regarding the a view and generates the
   final representation. SC.RenderBuffer will generate HTML which can be pushed
   to the DOM.
 
   @extends SC.Object
 */
 SC.RenderBuffer = function(tagName) {
-  return SC._RenderBuffer.create({
-    elementTag: tagName,
-    elementMap: {}
-  });
+  return SC._RenderBuffer.create({ elementTag: tagName });
 };
 
 SC._RenderBuffer = SC.Object.extend(
@@ -9452,7 +9491,7 @@ SC._RenderBuffer = SC.Object.extend(
 
     You should not maintain this array yourself, rather, you should use
     the addClass() method of SC.RenderBuffer.
-    
+
     @type Array
     @default []
   */
@@ -9463,21 +9502,21 @@ SC._RenderBuffer = SC.Object.extend(
 
     You should not set this property yourself, rather, you should use
     the id() method of SC.RenderBuffer.
-    
+
     @type String
     @default null
   */
   elementId: null,
 
   /**
-    A hash keyed on the name of the attribute and whose value will be 
-    applied to that attribute. For example, if you wanted to apply a 
-    data-view="Foo.bar" property to an element, you would set the 
+    A hash keyed on the name of the attribute and whose value will be
+    applied to that attribute. For example, if you wanted to apply a
+    data-view="Foo.bar" property to an element, you would set the
     elementAttributes hash to {'data-view':'Foo.bar'}
 
     You should not maintain this hash yourself, rather, you should use
     the attr() method of SC.RenderBuffer.
-    
+
     @type Hash
     @default {}
   */
@@ -9496,11 +9535,11 @@ SC._RenderBuffer = SC.Object.extend(
 
   /**
     The tagname of the element an instance of SC.RenderBuffer represents.
-    
+
     Usually, this gets set as the first parameter to SC.RenderBuffer. For
     example, if you wanted to create a `p` tag, then you would call
-    
-      SC.RenderBuffer('p')  
+
+      SC.RenderBuffer('p')
 
     @type String
     @default null
@@ -9508,9 +9547,9 @@ SC._RenderBuffer = SC.Object.extend(
   elementTag: null,
 
   /**
-    A hash keyed on the name of the style attribute and whose value will 
-    be applied to that attribute. For example, if you wanted to apply a 
-    background-color:black;" style to an element, you would set the 
+    A hash keyed on the name of the style attribute and whose value will
+    be applied to that attribute. For example, if you wanted to apply a
+    background-color:black;" style to an element, you would set the
     elementStyle hash to {'background-color':'black'}
 
     You should not maintain this hash yourself, rather, you should use
@@ -9522,35 +9561,9 @@ SC._RenderBuffer = SC.Object.extend(
   elementStyle: null,
 
   /**
-    RenderBuffer supports plugging in escaping functionality via
-    the boolean `escapeContent` property and the `escapeFunction`
-    property.
-
-    If `escapeContent` is set to true, the RenderBuffer will escape
-    the value of the `elementContent` property when `string()` is
-    called using `escapeFunction`, passing in the content.
-
-    @type Boolean
-  */
-  escapeContent: false,
-
-  /**
-    If escapeContent is set to true, escapeFunction will be called
-    to escape the content. Set this property to a function that
-    takes a content string as its parameter, and return a sanitized
-    string.
-    
-    @type Function
-    @see SC.RenderBuffer.prototype.escapeContent
-  */
-  escapeFunction: null,
-
-  elementMap: null,
-
-  /**
     Nested RenderBuffers will set this to their parent RenderBuffer
     instance.
- 
+
     @type SC._RenderBuffer
   */
   parentBuffer: null,
@@ -9574,7 +9587,7 @@ SC._RenderBuffer = SC.Object.extend(
     @returns {SC.RenderBuffer} this
   */
   push: function(string) {
-    get(this, 'childBuffers').pushObject(string);
+    get(this, 'childBuffers').pushObject(String(string));
     return this;
   },
 
@@ -9624,17 +9637,54 @@ SC._RenderBuffer = SC.Object.extend(
     return this;
   },
 
+  /**
+    Create a new child render buffer from a parent buffer. Optionally set
+    additional properties on the buffer. Optionally invoke a callback
+    with the newly created buffer.
+
+    This is a primitive method used by other public methods: `begin`,
+    `prepend`, `replaceWith`, `insertAfter`.
+
+    @private
+    @param {String} tagName Tag name to use for the child buffer's element
+    @param {SC._RenderBuffer} parent The parent render buffer that this
+      buffer should be appended to.
+    @param {Function} fn A callback to invoke with the newly created buffer.
+    @param {Object} other Additional properties to add to the newly created
+      buffer.
+  */
   newBuffer: function(tagName, parent, fn, other) {
     var buffer = SC._RenderBuffer.create({
       parentBuffer: parent,
-      elementTag: tagName,
-      elementMap: get(this, 'elementMap')
+      elementTag: tagName
     });
 
     if (other) { buffer.setProperties(other); }
     if (fn) { fn.call(this, buffer); }
 
     return buffer;
+  },
+
+  /**
+    Replace the current buffer with a new buffer. This is a primitive
+    used by `remove`, which passes `null` for `newBuffer`, and `replaceWith`,
+    which passes the new buffer it created.
+
+    @private
+    @param {SC._RenderBuffer} buffer The buffer to insert in place of
+      the existing buffer.
+  */
+  replaceWithBuffer: function(newBuffer) {
+    var parent = get(this, 'parentBuffer');
+    var childBuffers = get(parent, 'childBuffers');
+
+    var index = childBuffers.indexOf(this);
+
+    if (newBuffer) {
+      childBuffers.splice(index, 1, newBuffer);
+    } else {
+      childBuffers.splice(index, 1);
+    }
   },
 
   /**
@@ -9651,12 +9701,22 @@ SC._RenderBuffer = SC.Object.extend(
     });
   },
 
+  /**
+    Prepend a new child buffer to the current render buffer.
+
+    @param {String} tagName Tag name to use for the child buffer's element
+  */
   prepend: function(tagName) {
     return this.newBuffer(tagName, this, function(buffer) {
       get(this, 'childBuffers').insertAt(0, buffer);
     });
   },
 
+  /**
+    Replace the current buffer with a new render buffer.
+
+    @param {String} tagName Tag name to use for the new buffer's element
+  */
   replaceWith: function(tagName) {
     var parentBuffer = get(this, 'parentBuffer');
 
@@ -9665,6 +9725,11 @@ SC._RenderBuffer = SC.Object.extend(
     });
   },
 
+  /**
+    Insert a new render buffer after the current render buffer.
+
+    @param {String} tagName Tag name to use for the new buffer's element
+  */
   insertAfter: function(tagName) {
     var parentBuffer = get(this, 'parentBuffer');
 
@@ -9682,33 +9747,11 @@ SC._RenderBuffer = SC.Object.extend(
   */
   end: function() {
     var parent = get(this, 'parentBuffer');
-    var elementMap = get(this, 'elementMap'), elementId = get(this, 'elementId');
-
-    elementMap[elementId] = this;
-
     return parent || this;
   },
 
   remove: function() {
     this.replaceWithBuffer(null);
-  },
-
-  replaceWithBuffer: function(newBuffer) {
-    var elementMap = get(this, 'elementMap');
-    delete elementMap[get(this, 'elementId')];
-
-    var parent = get(this, 'parentBuffer');
-    var childBuffers = get(parent, 'childBuffers');
-
-    var index = childBuffers.indexOf(this);
-
-    if (newBuffer) {
-      childBuffers.splice(index, 1, newBuffer);
-    } else {
-      childBuffers.splice(index, 1);
-    }
-
-    return index;
   },
 
   /**
@@ -9757,10 +9800,6 @@ SC._RenderBuffer = SC.Object.extend(
     openTag = openTag.join(" ") + '>';
 
     content = content.join("");
-
-    if (get(this, 'escapeContent')) {
-      content = get(this, 'escapeFunction')(content);
-    }
 
     var childBuffers = get(this, 'childBuffers');
 
@@ -10180,18 +10219,24 @@ SC.View = SC.Object.extend(
     if (!template) { return; }
 
     var context = get(this, 'templateContext'),
-        options = {
-          data: {
-            view: this,
-            isRenderData: true
-          }
+        data = {
+          view: this,
+          buffer: buffer,
+          isRenderData: true
         };
 
     // The template should take care of rendering child views.
     this._didRenderChildViews = YES;
 
-    var output = template(context, options);
-    buffer.push(output);
+    // Invoke the template with the provided template context, which
+    // is the view by default. A hash of data is also passed that provides
+    // the template with access to the view and render buffer.
+    //
+    // The template should write directly to the render buffer instead
+    // of returning a string.
+    var output = template(context, { data: data });
+
+    if (output !== undefined) { buffer.push(output); }
   },
 
   /**
@@ -10693,8 +10738,12 @@ SC.View = SC.Object.extend(
       passed, a default buffer, using the current view's `tagName`, will
       be used.
   */
-  renderToBuffer: function(buffer) {
-    buffer = buffer || this.renderBuffer();
+  renderToBuffer: function(parentBuffer) {
+    if (parentBuffer) {
+      var buffer = parentBuffer.begin(get(this, 'tagName'));
+    } else {
+      var buffer = this.renderBuffer();
+    }
 
     var mixins, idx, len;
 
@@ -10712,6 +10761,8 @@ SC.View = SC.Object.extend(
     this._didRenderChildViews = false;
 
     SC.endPropertyChanges(this);
+
+    if (parentBuffer) { buffer.end(); }
 
     return buffer;
   },
@@ -10756,9 +10807,7 @@ SC.View = SC.Object.extend(
   */
   renderChildViews: function(buffer) {
     this.forEachChildView(function(view) {
-      buffer = buffer.begin(get(view, 'tagName'));
       view.renderToBuffer(buffer);
-      buffer = buffer.end();
     });
 
     this._didRenderChildViews = YES;
@@ -11359,8 +11408,17 @@ SC.$ = jQuery;
 */
 
 
+/**
+  @namespace
+
+  SproutCore Handlebars is an extension to Handlebars that makes the built-in
+  Handlebars helpers and {{mustaches}} binding-aware.
+*/
 SC.Handlebars = {};
 
+/**
+  Override the the opcode compiler and JavaScript compiler for Handlebars.
+*/
 SC.Handlebars.Compiler = function() {};
 SC.Handlebars.Compiler.prototype = SC.create(Handlebars.Compiler.prototype);
 SC.Handlebars.Compiler.prototype.compiler = SC.Handlebars.Compiler;
@@ -11369,6 +11427,14 @@ SC.Handlebars.JavaScriptCompiler = function() {};
 SC.Handlebars.JavaScriptCompiler.prototype = SC.create(Handlebars.JavaScriptCompiler.prototype);
 SC.Handlebars.JavaScriptCompiler.prototype.compiler = SC.Handlebars.JavaScriptCompiler;
 
+/**
+  Override the default property lookup semantics of Handlebars.
+
+  By default, Handlebars uses object[property] to look up properties. SproutCore's Handlebars
+  uses SC.get().
+
+  @private
+*/
 SC.Handlebars.JavaScriptCompiler.prototype.nameLookup = function(parent, name, type) {
   if (type === 'context') {
     return "SC.get(" + parent + ", " + this.quotedString(name) + ");";
@@ -11377,6 +11443,28 @@ SC.Handlebars.JavaScriptCompiler.prototype.nameLookup = function(parent, name, t
   }
 };
 
+SC.Handlebars.JavaScriptCompiler.prototype.initializeBuffer = function() {
+  return "''";
+};
+
+/**
+  Override the default buffer for SproutCore Handlebars. By default, Handlebars creates
+  an empty String at the beginning of each invocation and appends to it. SproutCore's
+  Handlebars overrides this to append to a single shared buffer.
+
+  @private
+*/
+SC.Handlebars.JavaScriptCompiler.prototype.appendToBuffer = function(string) {
+  return "data.buffer.push("+string+");";
+};
+
+/**
+  Rewrite simple mustaches from {{foo}} to {{bind "foo"}}. This means that all simple
+  mustaches in SproutCore's Handlebars will also set up an observer to keep the DOM
+  up to date when the underlying property changes.
+
+  @private
+*/
 SC.Handlebars.Compiler.prototype.mustache = function(mustache) {
   if (mustache.params.length || mustache.hash) {
     return Handlebars.Compiler.prototype.mustache.call(this, mustache);
@@ -11395,12 +11483,18 @@ SC.Handlebars.Compiler.prototype.mustache = function(mustache) {
   }
 };
 
+/**
+  The entry point for SproutCore Handlebars. This replaces the default Handlebars.compile and turns on
+  template-local data and String parameters.
+
+  @param {String} string The template to compile
+*/
 SC.Handlebars.compile = function(string) {
   var ast = Handlebars.parse(string);
   var environment = new SC.Handlebars.Compiler().compile(ast, {data: true, stringParams: true});
-  var ret = new SC.Handlebars.JavaScriptCompiler().compile(environment, {data: true, stringParams: true});
-  ret.rawTemplate = string;
-  return ret;
+  var compiled = new SC.Handlebars.JavaScriptCompiler().compile(environment, {data: true, stringParams: true});
+
+  return compiled;
 };
 
 /**
@@ -11422,9 +11516,6 @@ Handlebars.registerHelper('helperMissing', function(path, options) {
   throw new SC.Error(SC.String.fmt(error, options.data.view, path, this));
 });
 
-SC._RenderBuffer.reopen({
-  escapeFunction: Handlebars.Utils.escapeExpression
-});
 
 })({});
 
@@ -11817,7 +11908,7 @@ SC._BindableSpanView = SC.View.extend(
   render: function(buffer) {
     // If not invoked via a triple-mustache ({{{foo}}}), escape
     // the content of the template.
-    if(get(this, 'isEscaped')) { set(buffer, 'escapeContent', true); }
+    var escape = get(this, 'isEscaped');
 
     var shouldDisplay = get(this, 'shouldDisplayFunc'),
         property = get(this, 'property'),
@@ -11846,6 +11937,8 @@ SC._BindableSpanView = SC.View.extend(
         } else {
         // This is not a bind block, just push the result of the
         // expression to the render context and return.
+          if (result == null) { result = ""; } else { result = String(result); }
+          if (escape) { result = Handlebars.Utils.escapeExpression(result); }
           buffer.push(result);
           return;
         }
@@ -11947,13 +12040,11 @@ var get = SC.get, getPath = SC.getPath;
       // tells the SC._BindableSpan to re-render.
       SC.addObserver(ctx, property, invoker);
 
-
-      var buffer = bindView.renderToBuffer();
-      return new Handlebars.SafeString(buffer.string());
+      bindView.renderToBuffer(data.buffer);
     } else {
       // The object is not observable, so just render it out and
       // be done with it.
-      return getPath(this, property);
+      data.buffer.push(getPath(this, property));
     }
   };
 
@@ -12337,10 +12428,7 @@ SC.Handlebars.ViewHelper = SC.Object.create({
     if (fn) { set(childView, 'template', fn); }
 
     childViews.pushObject(childView);
-
-    var buffer = childView.renderToBuffer();
-
-    return new Handlebars.SafeString(buffer.string());
+    childView.renderToBuffer(data.buffer);
   }
 });
 
@@ -12546,51 +12634,51 @@ Handlebars.registerHelper('raw', function(property) {
 // to SC.CoreView in the global SC.TEMPLATES object.
 
 SC.$(document).ready(function() {
-  SC.$('head script[type="text/html"]').each(function() {
+  SC.$('script[type="text/html"]')
+    .each(function() {
     // Get a reference to the script tag
-    var script = SC.$(this);
+    var script = SC.$(this),
+      // Get the name of the script, used by SC.View's templateName property.
+      // First look for data-template-name attribute, then fall back to its
+      // id if no name is found.
+      templateName = script.attr('data-template-name') || script.attr('id'),
+      template = SC.Handlebars.compile(script.html()),
+      view, viewPath;
 
-    // Get the name of the script, used by SC.View's templateName property.
-    // First look for data-template-name attribute, then fall back to its
-    // id if no name is found.
-    var templateName = script.attr('data-template-name') || script.attr('id');
+    if (templateName) {
+      // For templates which have a name, we save them and then remove them from the DOM
+      SC.TEMPLATES[templateName] = template;
 
-    if (!templateName) {
-      throw new SC.Error("Template found without a name specified." +
+      // Remove script tag from DOM
+      script.remove();
+    } else {
+      if (script.parents('head').length !== 0) {
+        // don't allow inline templates in the head
+        throw new SC.Error("Template found in \<head\> without a name specified. " +
                          "Please provide a data-template-name attribute.\n" +
                          script.html());
+      }
+
+      // For templates which will be evaluated inline in the HTML document, instantiates a new
+      // view, and replaces the script tag holding the template with the new
+      // view's DOM representation.
+      //
+      // Users can optionally specify a custom view subclass to use by setting the
+      // data-view attribute of the script tag.
+      viewPath = script.attr('data-view');
+      view = viewPath ? SC.getPath(viewPath) : SC.View;
+
+      view = view.create({
+        template: template
+      });
+
+      view._insertElementLater(function() {
+        script.replaceWith(this.$());
+
+        // Avoid memory leak in IE
+        script = null;
+      });
     }
-
-    SC.TEMPLATES[templateName] = SC.Handlebars.compile(script.html());
-
-    // Remove script tag from DOM
-    script.remove();
-  });
-
-  // Finds templates stored inline in the HTML document, instantiates a new
-  // view, and replaces the script tag holding the template with the new
-  // view's DOM representation.
-  //
-  // Users can optionally specify a custom view subclass to use by setting the
-  // data-view attribute of the script tag.
-
-  SC.$('body script[type="text/html"]').each(function() {
-    var script = SC.$(this),
-        template = SC.Handlebars.compile(script.html()),
-        viewPath = script.attr('data-view');
-
-    var view = viewPath ? SC.getPath(viewPath) : SC.View;
-
-    view = view.create({
-      template: template
-    });
-
-    view._insertElementLater(function() {
-      script.replaceWith(this.$());
-
-      // Avoid memory leak in IE
-      script = null;
-    });
   });
 });
 
