@@ -1687,8 +1687,9 @@ if (SC.platform.defineProperty && !SC.platform.definePropertyOnDOM) {
 SC.platform.hasPropertyAccessors = true;
 
 //@if (legacy)
-if (!SC.platform.defineProperty) {
-  SC.platform.hasPropertyAccessors = !!SC.platform.defineProperty;
+if (!SC.platform.defineProperty || !Object.prototype.__defineGetter__) {
+  // IE8: check the __defineGetter__
+  SC.platform.hasPropertyAccessors = !!SC.platform.defineProperty && !!Object.prototype.__defineGetter__;
 
   SC.platform.defineProperty = function(obj, keyName, desc) {
     sc_assert("property descriptor cannot have `get` or `set` on this platform", !desc.get && !desc.set);
@@ -2126,9 +2127,9 @@ function normalizePath(path) {
     path && path!=='');
     
   if (path==='*') return path; //special case...
-  var first = path[0];
+  var first = path.charAt(0);
   if(first==='.') return 'this'+path;
-  if (first==='*' && path[1]!=='.') return 'this.'+path.slice(1);
+  if (first==='*' && path.charAt(1)!=='.') return 'this.'+path.slice(1);
   return path;
 }
 
@@ -2172,7 +2173,7 @@ function normalizeTuple(target, path) {
   if (hasThis) path = path.slice(5);
   
   var idx = path.indexOf('*');
-  if (idx>0 && path[idx-1]!=='.') {
+  if (idx>0 && path.charAt(idx-1)!=='.') {
     
     // should not do lookup on a prototype object because the object isn't
     // really live yet.
@@ -2295,6 +2296,72 @@ SC.setPath = function(root, path, value) {
   return SC.set(root, keyName, value);
 };
 
+
+})({});
+
+
+(function(exports) {
+// From: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/map
+if (!Array.prototype.map)
+{
+  Array.prototype.map = function(fun /*, thisp */)
+  {
+    "use strict";
+
+    if (this === void 0 || this === null)
+      throw new TypeError();
+
+    var t = Object(this);
+    var len = t.length >>> 0;
+    if (typeof fun !== "function")
+      throw new TypeError();
+
+    var res = new Array(len);
+    var thisp = arguments[1];
+    for (var i = 0; i < len; i++)
+    {
+      if (i in t)
+        res[i] = fun.call(thisp, t[i], i, t);
+    }
+
+    return res;
+  };
+}
+
+// From: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/foreach
+if (!Array.prototype.forEach)
+{
+  Array.prototype.forEach = function(fun /*, thisp */)
+  {
+    "use strict";
+ 
+    if (this === void 0 || this === null)
+      throw new TypeError();
+ 
+    var t = Object(this);
+    var len = t.length >>> 0;
+    if (typeof fun !== "function")
+      throw new TypeError();
+
+    var thisp = arguments[1];
+    for (var i = 0; i < len; i++)
+    {
+      if (i in t)
+        fun.call(thisp, t[i], i, t);
+    }
+  };
+}
+
+if (!Array.prototype.indexOf) {
+  Array.prototype.indexOf = function (obj, fromIndex) {
+    if (fromIndex == null) { fromIndex = 0; }
+    else if (fromIndex < 0) { fromIndex = Math.max(0, this.length + fromIndex); }
+    for (var i = fromIndex, j = this.length; i < j; i++) {
+      if (this[i] === obj) { return i; }
+    }
+    return -1;
+  };
+}
 
 })({});
 
@@ -3840,6 +3907,7 @@ SC.propertyDidChange = function(obj, keyName) {
 
 
 
+
 var Mixin, MixinDelegate, REQUIRED, Alias;
 var classToString;
 
@@ -3944,7 +4012,11 @@ function mergeMixins(mixins, m, descs, values, base) {
           values[key] = value;
         }
       }
-      
+
+      // manually copy toString() because some JS engines do not enumerate it
+      if (props.hasOwnProperty('toString')) {
+        base.toString = props.toString;
+      }
       
     } else if (mixin.mixins) {
       mergeMixins(mixin.mixins, m, descs, values, base);
@@ -4203,7 +4275,7 @@ var NAME_KEY = SC.GUID_KEY+'_name';
 function processNames(paths, root, seen) {
   var idx = paths.length;
   for(var key in root) {
-    if (!root.hasOwnProperty(key)) continue;
+    if (!root.hasOwnProperty || !root.hasOwnProperty(key)) continue;
     var obj = root[key];
     paths[idx] = key;
 
@@ -7836,7 +7908,8 @@ function invoke(target, method, args, ignore) {
   if (args && ignore>0) {
     args = args.length>ignore ? slice.call(args, ignore) : null;
   }
-  return method.apply(target, args);
+  // IE8's Function.prototype.apply doesn't accept undefined/null arguments.
+  return method.apply(target || this, args || []);
 }
 
 
@@ -10329,7 +10402,7 @@ SC.View = SC.Object.extend(
           elem.attr(attribute, attributeValue);
         } else if (attributeValue && type === 'boolean') {
           elem.attr(attribute, attribute);
-        } else {
+        } else if (attributeValue === NO) {
           elem.removeAttr(attribute);
         }
       };
@@ -11543,6 +11616,12 @@ SC.Checkbox = SC.View.extend({
 
   defaultTemplate: SC.Handlebars.compile('<label><input type="checkbox" {{bindAttr checked="value"}}>{{title}}</label>'),
 
+  click: function() {
+    if (jQuery.browser.msie) {
+      this.change();
+    }
+  },
+
   change: function() {
     SC.run.once(this, this._updateElementValue);
     return false;
@@ -12634,7 +12713,7 @@ Handlebars.registerHelper('raw', function(property) {
 // to SC.CoreView in the global SC.TEMPLATES object.
 
 SC.$(document).ready(function() {
-  SC.$('script[type="text/html"]')
+  SC.$('script[type="text/html"], script[type="text/x-handlebars"]')
     .each(function() {
     // Get a reference to the script tag
     var script = SC.$(this),
