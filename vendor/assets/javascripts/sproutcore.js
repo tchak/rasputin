@@ -455,25 +455,7 @@ lexer.conditions = {"mu":{"rules":[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 parser.lexer = lexer;
 return parser;
 })();
-if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
-exports.parser = handlebars;
-exports.parse = function () { return handlebars.parse.apply(handlebars, arguments); }
-exports.main = function commonjsMain(args) {
-    if (!args[1])
-        throw new Error('Usage: '+args[0]+' FILE');
-    if (typeof process !== 'undefined') {
-        var source = require('fs').readFileSync(require('path').join(process.cwd(), args[1]), "utf8");
-    } else {
-        var cwd = require("file").path(require("file").cwd());
-        var source = cwd.join(args[1]).read({charset: "utf-8"});
-    }
-    return exports.parser.parse(source);
-}
-if (typeof module !== 'undefined' && require.main === module) {
-  exports.main(typeof process !== 'undefined' ? process.argv.slice(1) : require("system").args);
-}
-};
-;
+
 // lib/handlebars/base.js
 Handlebars = {};
 
@@ -510,8 +492,9 @@ Handlebars.registerHelper('helperMissing', function(arg) {
   }
 });
 
-Handlebars.registerHelper('blockHelperMissing', function(context, fn, inverse) {
-  inverse = inverse || function() {};
+Handlebars.registerHelper('blockHelperMissing', function(context, options) {
+  var inverse = options.inverse || function() {}, fn = options.fn;
+
 
   var ret = "";
   var type = Object.prototype.toString.call(context);
@@ -536,11 +519,10 @@ Handlebars.registerHelper('blockHelperMissing', function(context, fn, inverse) {
   } else {
     return fn(context);
   }
-}, function(context, fn) {
-  return fn(context);
 });
 
-Handlebars.registerHelper('each', function(context, fn, inverse) {
+Handlebars.registerHelper('each', function(context, options) {
+  var fn = options.fn, inverse = options.inverse;
   var ret = "";
 
   if(context && context.length > 0) {
@@ -553,20 +535,24 @@ Handlebars.registerHelper('each', function(context, fn, inverse) {
   return ret;
 });
 
-Handlebars.registerHelper('if', function(context, fn, inverse) {
-  if(!context || context == []) {
-    return inverse(this);
+Handlebars.registerHelper('if', function(context, options) {
+  if(!context || Handlebars.Utils.isEmpty(context)) {
+    return options.inverse(this);
   } else {
-    return fn(this);
+    return options.fn(this);
   }
 });
 
-Handlebars.registerHelper('unless', function(context, fn, inverse) {
-  return Handlebars.helpers['if'].call(this, context, inverse, fn);
+Handlebars.registerHelper('unless', function(context, options) {
+  var fn = options.fn, inverse = options.inverse;
+  options.fn = inverse;
+  options.inverse = fn;
+
+  return Handlebars.helpers['if'].call(this, context, options);
 });
 
-Handlebars.registerHelper('with', function(context, fn) {
-  return fn(context);
+Handlebars.registerHelper('with', function(context, options) {
+  return options.fn(context);
 });
 
 Handlebars.logger = {
@@ -666,9 +652,9 @@ Handlebars.log = function(level, str) { Handlebars.logger.log(level, str); };
     this.integer = integer;
   };
 
-  Handlebars.AST.BooleanNode = function(boolean) {
+  Handlebars.AST.BooleanNode = function(bool) {
     this.type = "BOOLEAN";
-    this.boolean = boolean;
+    this.bool = bool;
   };
 
   Handlebars.AST.CommentNode = function(comment) {
@@ -688,8 +674,13 @@ Handlebars.Visitor.prototype = {
 };;
 // lib/handlebars/utils.js
 Handlebars.Exception = function(message) {
-  this.message = message;
+  var tmp = Error.prototype.constructor.apply(this, arguments);
+
+  for (var p in tmp) {
+    if (tmp.hasOwnProperty(p)) { this[p] = tmp[p]; }
+  }
 };
+Handlebars.Exception.prototype = new Error;
 
 // Build out our basic SafeString type
 Handlebars.SafeString = function(string) {
@@ -712,7 +703,7 @@ Handlebars.SafeString.prototype.toString = function() {
   var possible = /[&<>"'`]/;
 
   var escapeChar = function(chr) {
-    return escape[chr] || "&amp;"
+    return escape[chr] || "&amp;";
   };
 
   Handlebars.Utils = {
@@ -762,7 +753,6 @@ Handlebars.JavaScriptCompiler = function() {};
     invokeProgram: 11,
     invokePartial: 12,
     push: 13,
-    invokeInverse: 14,
     assignToHash: 15,
     pushStringParam: 16
   };
@@ -779,7 +769,6 @@ Handlebars.JavaScriptCompiler = function() {};
     invokeProgram: 2,
     invokePartial: 1,
     push: 1,
-    invokeInverse: 1,
     assignToHash: 1,
     pushStringParam: 1
   };
@@ -900,10 +889,13 @@ Handlebars.JavaScriptCompiler = function() {};
     },
 
     inverse: function(block) {
-      this.ID(block.mustache.id);
+      var params = this.setupStackForMustache(block.mustache);
+
       var programGuid = this.compileProgram(block.program);
 
-      this.opcode('invokeInverse', programGuid);
+      this.declare('inverse', programGuid);
+
+      this.opcode('invokeProgram', null, params.length);
       this.opcode('append');
     },
 
@@ -971,8 +963,8 @@ Handlebars.JavaScriptCompiler = function() {};
       this.opcode('push', integer.integer);
     },
 
-    BOOLEAN: function(boolean) {
-      this.opcode('push', boolean.boolean);
+    BOOLEAN: function(bool) {
+      this.opcode('push', bool.bool);
     },
 
     comment: function() {},
@@ -1181,15 +1173,11 @@ Handlebars.JavaScriptCompiler = function() {};
       container.children = this.environment.children;
 
       return function(context, options, $depth) {
-        try {
-          options = options || {};
-          var args = [Handlebars, context, options.helpers, options.partials, options.data];
-          var depth = Array.prototype.slice.call(arguments, 2);
-          args = args.concat(depth);
-          return container.render.apply(container, args);
-        } catch(e) {
-          throw e;
-        }
+        options = options || {};
+        var args = [Handlebars, context, options.helpers, options.partials, options.data];
+        var depth = Array.prototype.slice.call(arguments, 2);
+        args = args.concat(depth);
+        return container.render.apply(container, args);
       };
     },
 
@@ -1308,11 +1296,6 @@ Handlebars.JavaScriptCompiler = function() {};
 
       params.push('tmp1');
 
-      // TODO: This is legacy behavior. Deprecate and remove.
-      if(inverse) {
-        params.push(inverse);
-      }
-
       this.populateCall(params, id, helperId || id, fn);
     },
 
@@ -1324,13 +1307,6 @@ Handlebars.JavaScriptCompiler = function() {};
 
       this.source.push("if(typeof " + id + " === 'function') { " + nextStack + " = " + id + ".call(" + paramString + "); }");
       fn.call(this, nextStack, helperMissingString, id);
-    },
-
-    invokeInverse: function(guid) {
-      var program = this.programExpression(guid);
-
-      var blockMissingParams = ["context", this.topStack(), "this.noop", program];
-      this.pushStack("helpers.blockHelperMissing.call(" + blockMissingParams.join(", ") + ")");
     },
 
     invokePartial: function(context) {
@@ -1554,6 +1530,14 @@ SC.VERSION = '2.0.alpha';
 SC.ENV = 'undefined' === typeof ENV ? {} : ENV;
 
 /**
+  Empty function.  Useful for some operations.
+
+  @returns {Object}
+  @private
+*/
+SC.K = function() { return this; };
+
+/**
   Define an assertion that will throw an exception if the condition is not 
   met.  SproutCore build tools will remove any calls to sc_assert() when 
   doing a production build.
@@ -1588,6 +1572,9 @@ window.sc_assert = function sc_assert(desc, test) {
   if ('function' === typeof test) test = test()!==false;
   if (!test) throw new Error("assertion failed: "+desc);
 };
+
+//if ('undefined' === typeof sc_require) sc_require = SC.K;
+if ('undefined' === typeof require) require = SC.K;
 
 })({});
 
@@ -2148,6 +2135,9 @@ function getPath(target, path) {
     if (next<0) next = len;
     key = path.slice(idx, next);
     target = key==='*' ? target : get(target, key);
+
+    if (target && target.isDestroyed) { return undefined; }
+
     idx = next+1;
   }
   return target ;
@@ -2259,7 +2249,7 @@ SC.getPath = function(root, path) {
   return getPath(root, path);
 };
 
-SC.setPath = function(root, path, value) {
+SC.setPath = function(root, path, value, tolerant) {
   var keyName;
   
   if (arguments.length===2 && 'string' === typeof root) {
@@ -2292,9 +2282,31 @@ SC.setPath = function(root, path, value) {
   if (!keyName || keyName.length===0 || keyName==='*') {
     throw new Error('Invalid Path');
   }
-  
+
+  if (!root) {
+    if (tolerant) { return; }
+    else { throw new Error('Object in path '+path+' could not be found or was destroyed.'); }
+  }
+
   return SC.set(root, keyName, value);
 };
+
+/**
+  Error-tolerant form of SC.setPath. Will not blow up if any part of the
+  chain is undefined, null, or destroyed.
+
+  This is primarily used when syncing bindings, which may try to update after
+  an object has been destroyed.
+*/
+SC.trySetPath = function(root, path, value) {
+  if (arguments.length===2 && 'string' === typeof root) {
+    value = path;
+    path = root;
+    root = null;
+  }
+
+  return SC.setPath(root, path, value, true);
+}
 
 
 })({});
@@ -2511,7 +2523,11 @@ if (!USE_ACCESSORS) {
   };
 
   SC.Descriptor.MUST_USE_SETTER = function() {
-    sc_assert('Must use SC.set() to access this property', false);
+    if (this.isDestroyed) {
+      sc_assert('You cannot set observed properties on destroyed objects', false);
+    } else {
+      sc_assert('Must use SC.set() to access this property', false);
+    }
   };
 }
 //@endif
@@ -3064,15 +3080,16 @@ function objectFor(m, obj, writable) {
     } else if (!ret || (ret.__scproto__ !== obj)) {
       return undefined;
     }
-    
+
     m = ret;
   }
-  
+
   return ret;
 }
 
 function listenerSetFor(obj, eventName, target, writable) {
-  return objectFor(meta(obj, writable), obj, writable, 'listeners', eventName, target);
+  var targetGuid = guidFor(target);
+  return objectFor(meta(obj, writable), obj, writable, 'listeners', eventName, targetGuid);
 }
 
 var EV_SKIP = { __scproto__: true };
@@ -3186,10 +3203,10 @@ function hasListeners(obj, eventName) {
 function listenersFor(obj, eventName) {
   var targets = meta(obj, false).listeners, 
       ret = [];
-      
+
   if (targets) targets = targets[eventName];
   if (!targets) return ret;
-  
+
   var tguid, mguid, methods, info;
   for(tguid in targets) {
     if (EV_SKIP[tguid] || !targets[tguid]) continue;
@@ -4752,14 +4769,6 @@ if (!SC.keys) {
   };
 }
 
-/**
-  Empty function.  Useful for some operations.
-
-  @returns {Object}
-  @private
-*/
-SC.K = function() { return this; };
-
 // ..........................................................
 // ERROR
 // 
@@ -4790,11 +4799,6 @@ SC.Error.prototype = SC.create(Error.prototype);
   Override this to provide more robust logging functionality.
 */
 SC.Logger = window.console;
-
-//if ('undefined' === typeof sc_require) sc_require = SC.K;
-if ('undefined' === typeof require) require = SC.K;
-
-
 
 })({});
 
@@ -5506,7 +5510,7 @@ SC.Enumerable = SC.Mixin.create( /** @lends SC.Enumerable */ {
     var len = get(this, 'length') ;
     if (target === undefined) target = null;
 
-    var last = null, next, found = false, ret = undefined ;
+    var last = null, next, found = false, ret ;
     var context = popCtx();
     for(var idx=0;idx<len && !found;idx++) {
       next = this.nextObject(idx, last, context) ;
@@ -7162,7 +7166,11 @@ function makeCtor() {
       rewatch(this); // ålways rewatch just in case
       this.init.apply(this, arguments);
     } else {
-      if (hasChains) { rewatch(this); }
+      if (hasChains) {
+        rewatch(this);
+      } else {
+        this[SC.GUID_KEY] = undefined;
+      }
       if (init===false) { init = this.init; } // cache for later instantiations
       init.apply(this, arguments);
     }
@@ -7202,6 +7210,7 @@ CoreObject.PrototypeMixin = SC.Mixin.create({
 
   destroy: function() {
     set(this, 'isDestroyed', true);
+    this[SC.META_KEY] = null;
     return this;
   },
 
@@ -7232,6 +7241,9 @@ var ClassMixin = SC.Mixin.create({
     var Class = makeCtor(), proto;
     Class.ClassMixin = SC.Mixin.create(this.ClassMixin);
     Class.PrototypeMixin = SC.Mixin.create(this.PrototypeMixin);
+
+    Class.ClassMixin.ownerConstructor = Class;
+    Class.PrototypeMixin.ownerConstructor = Class;
 
     var PrototypeMixin = Class.PrototypeMixin;
     PrototypeMixin.reopen.apply(PrototypeMixin, arguments);
@@ -8136,8 +8148,16 @@ function autorun() {
 */
 SC.run.autorun = function() {
 
-  if (!run.currentRunLoop) run.begin();
-  if (!autorunTimer) autorunTimer = setTimeout(autorun, 1);
+  if (!run.currentRunLoop) {
+    run.begin();
+
+    // TODO: throw during tests
+    if (SC.testing) {
+      run.end();
+    } else if (!autorunTimer) {
+      autorunTimer = setTimeout(autorun, 1);
+    }
+  }
 
   return run.currentRunLoop;
 };
@@ -8955,6 +8975,8 @@ var Binding = SC.Object.extend({
     //@if (debug)
     var log = SC.LOG_BINDINGS;
     //@endif
+
+    if (obj.isDestroyed) { return; }
     
     var guid = guidFor(obj), direction = this[guid], val, tv;
     if (!this._readyToSync) return; // not connected.
@@ -8969,10 +8991,11 @@ var Binding = SC.Object.extend({
       //@endif
       
       // apply changes
-      SC.setPath(obj, this._to, tv);
+      SC.trySetPath(obj, this._to, tv);
 
     } else if (direction === 'back' && !this._oneWay) {
       val = getPath(obj, this._to);
+
       tv  = transformedValue(this, fromValue(obj, this), obj);
       if (val !== tv) {
 
@@ -8980,7 +9003,7 @@ var Binding = SC.Object.extend({
         if (log) { SC.Logger.log(' ', this.toString(), val, '<-', tv, obj); }
         //@endif
 
-        SC.setPath(obj, this._from, val);
+        SC.trySetPath(obj, this._from, val);
       }
     }
   }
@@ -9027,14 +9050,6 @@ Binding.reopenClass(/** @scope SC.Binding */ {
   multiple: function(from) {
     var C = this, binding = new C(null, from);
     return binding.multiple();
-  },
-
-  /**
-    @see SC.Binding.prototype.oneWay
-  */
-  oneWay: function(from, flag) {
-    var C = this, binding = new C(null, from);
-    return binding.oneWay(flag);
   },
 
   /**
@@ -9897,7 +9912,7 @@ SC._RenderBuffer = SC.Object.extend(
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get, set = SC.set;
+var get = SC.get, set = SC.set, fmt = SC.String.fmt;
 
 /**
   @ignore
@@ -9952,11 +9967,19 @@ SC.EventDispatcher = SC.Object.extend(
       change      : 'change'
     };
 
-    jQuery.extend(events, addedEvents || {})
+    jQuery.extend(events, addedEvents || {});
+
+    var rootElement = SC.$(get(this, 'rootElement'));
+
+    sc_assert(fmt('You cannot use the same root element (%@) multiple times in an SC.Application', [rootElement.selector || rootElement[0].tagName]), !rootElement.is('.sc-application'));
+    sc_assert('You cannot make a new SC.Application using a root element that is a descendent of an existing SC.Application', !rootElement.closest('.sc-application').length);
+    sc_assert('You cannot make a new SC.Application using a root element that is an ancestor of an existing SC.Application', !rootElement.find('.sc-application').length);
+
+    rootElement.addClass('sc-application')
 
     for (event in events) {
       if (events.hasOwnProperty(event)) {
-        this.setupHandler(event, events[event]);
+        this.setupHandler(rootElement, event, events[event]);
       }
     }
   },
@@ -9980,10 +10003,8 @@ SC.EventDispatcher = SC.Object.extend(
     @param {String} event the browser-originated event to listen to
     @param {String} eventName the name of the method to call on the view
   */
-  setupHandler: function(event, eventName) {
-    var rootElement = get(this, 'rootElement');
-
-    SC.$(rootElement).delegate('.sc-view', event + '.sproutcore', function(evt) {
+  setupHandler: function(rootElement, event, eventName) {
+    rootElement.delegate('.sc-view', event + '.sproutcore', function(evt) {
       var view = SC.View.views[this.id],
           result = true, handler;
 
@@ -10006,8 +10027,8 @@ SC.EventDispatcher = SC.Object.extend(
   /** @private */
   destroy: function() {
     var rootElement = get(this, 'rootElement');
-
-    SC.$(rootElement).undelegate('.sproutcore');
+    SC.$(rootElement).undelegate('.sproutcore').removeClass('sc-application');
+    return this._super();
   }
 });
 
@@ -10099,6 +10120,7 @@ SC.Application = SC.Namespace.extend(
   /** @private */
   destroy: function() {
     get(this, 'eventDispatcher').destroy();
+    return this._super();
   }
 });
 
@@ -10147,6 +10169,9 @@ queues.insertAt(queues.indexOf('actions')+1, 'render');
 /*globals sc_assert */
 
 var get = SC.get, set = SC.set, addObserver = SC.addObserver;
+var getPath = SC.getPath, meta = SC.meta, fmt = SC.String.fmt;
+
+var destroyedError = "You can't call %@ on a destroyed view";
 
 /**
   @static
@@ -10219,12 +10244,12 @@ SC.View = SC.Object.extend(
         template = get(get(this, 'templates'), templateName);
 
     // If there is no template but a templateName has been specified,
-    // try to lookup as a module
+    // try to lookup as a spade module
     if (!template && templateName) {
       if ('undefined' !== require && require.exists) {
-        if (require.exists(templateName)) template = require(templateName);
+        if (require.exists(templateName)) { template = require(templateName); }
       }
-      
+
       if (!template) {
         throw new SC.Error('%@ - Unable to find template "%@".'.fmt(this, templateName));
       }
@@ -10267,11 +10292,10 @@ SC.View = SC.Object.extend(
   isVisible: true,
 
   /**
-    Array of child views. You should never edit this array directly unless
-    you are implementing createChildViews(). Most of the time, you should
-    use the accessor methods such as appendChild(), insertBefore() and
-    removeChild().
+    Array of child views. You should never edit this array directly.
+    Instead, use appendChild and removeFromParent.
 
+    @private
     @type Array
     @default []
   */
@@ -10279,37 +10303,74 @@ SC.View = SC.Object.extend(
 
   /**
     Called on your view when it should push strings of HTML into a
-    SC.RenderBuffer.
+    SC.RenderBuffer. Most users will want to override the `template`
+    or `templateName` properties instead of this method.
 
     By default, SC.View will look for a function in the `template`
-    property and invoke it with the value of `templateContext`. By default,
-    `templateContext` will be the view itself.
+    property and invoke it with the value of `templateContext`. The value of
+    `templateContext` will be the view itself unless you override it.
 
     @param {SC.RenderBuffer} buffer The render buffer
   */
   render: function(buffer) {
     var template = get(this, 'template');
-    if (!template) { return; }
 
-    var context = get(this, 'templateContext'),
-        data = {
-          view: this,
-          buffer: buffer,
-          isRenderData: true
-        };
+    if (template) {
+      var context = get(this, 'templateContext'),
+          data = { view: this, buffer: buffer, isRenderData: true };
 
-    // The template should take care of rendering child views.
-    this._didRenderChildViews = YES;
+      // Invoke the template with the provided template context, which
+      // is the view by default. A hash of data is also passed that provides
+      // the template with access to the view and render buffer.
 
-    // Invoke the template with the provided template context, which
-    // is the view by default. A hash of data is also passed that provides
-    // the template with access to the view and render buffer.
-    //
-    // The template should write directly to the render buffer instead
-    // of returning a string.
-    var output = template(context, { data: data });
+      // The template should write directly to the render buffer instead
+      // of returning a string.
+      var output = template(context, { data: data });
 
-    if (output !== undefined) { buffer.push(output); }
+      // If the template returned a string instead of writing to the buffer,
+      // push the string onto the buffer.
+      if (output !== undefined) { buffer.push(output); }
+    }
+  },
+
+  invokeForState: function(name) {
+    var parent = this, states = parent.states;
+
+    while (states) {
+      var stateName = this.state,
+          state     = states[stateName];
+
+      if (state) {
+        var fn = state[name] || states["default"][name];
+
+        if (fn) {
+          var args = Array.prototype.slice.call(arguments, 1);
+          args.unshift(this);
+
+          return fn.apply(this, args);
+        }
+      }
+
+      states = states.parent;
+    }
+  },
+
+  /**
+    Renders the view again. This will work regardless of whether the
+    view is already in the DOM or not. If the view is in the DOM, the
+    rendering process will be deferred to give bindings a chance
+    to synchronize.
+
+    If children were added during the rendering process using `appendChild`,
+    `rerender` will remove them, because they will be added again
+    if needed by the next `render`.
+
+    In general, if the display of your view changes, you should modify
+    the DOM element directly instead of manually calling `rerender`, which can
+    be slow.
+  */
+  rerender: function() {
+    return this.invokeForState('rerender');
   },
 
   /**
@@ -10495,6 +10556,11 @@ SC.View = SC.Object.extend(
     var elem = get(this, 'element');
 
     if (!elem) {
+      // if we don't have an element yet, someone calling this.$() is
+      // trying to update an element that isn't in the DOM. Instead,
+      // rerender the view to allow the render method to reflect the
+      // changes.
+      this.rerender();
       return SC.$();
     } else if (sel === undefined) {
       return SC.$(elem);
@@ -10511,7 +10577,7 @@ SC.View = SC.Object.extend(
 
     while(--idx >= 0) {
       view = childViews[idx];
-      callback.call(this, view);
+      callback.call(this, view, idx);
     }
 
     return this;
@@ -10575,17 +10641,7 @@ SC.View = SC.Object.extend(
     @param {Function} fn the function that inserts the element into the DOM
   */
   _insertElementLater: function(fn) {
-    SC.run.schedule('render', this, function() {
-      // If we don't have an element, guarantee that it exists before
-      // invoking the willInsertElement event.
-      this.createElement();
-
-      this._notifyWillInsertElement();
-      fn.call(this);
-      this._notifyDidInsertElement();
-    });
-
-    return this;
+    SC.run.schedule('render', this, 'invokeForState', 'insertElement', fn);
   },
 
   /**
@@ -10610,7 +10666,7 @@ SC.View = SC.Object.extend(
   */
   remove: function() {
     // What we should really do here is wait until the end of the run loop
-    // to determine if the element has been re-appended to a different 
+    // to determine if the element has been re-appended to a different
     // element.
     // In the interim, we will just re-render if that happens. It is more
     // important than elements get garbage collected.
@@ -10633,7 +10689,7 @@ SC.View = SC.Object.extend(
     Attempts to discover the element in the parent element. The default
     implementation looks for an element with an ID of elementId (or the view's
     guid if elementId is null). You can override this method to provide your
-    own form of lookup. For example, if you want to discover your element 
+    own form of lookup. For example, if you want to discover your element
     using a CSS class name instead of an ID.
 
     @param {DOMElement} parentElement The parent's DOM element
@@ -10646,7 +10702,7 @@ SC.View = SC.Object.extend(
 
   /**
     Creates a new renderBuffer with the passed tagName. You can override this
-    method to provide further customization to the buffer if needed. Normally 
+    method to provide further customization to the buffer if needed. Normally
     you will not need to call or override this method.
 
     @returns {SC.RenderBuffer}
@@ -10670,6 +10726,11 @@ SC.View = SC.Object.extend(
     var buffer = this.renderToBuffer();
     set(this, 'element', buffer.element());
 
+    this.invokeRecursively(function(view) {
+      meta(view)['SC.View'].buffer = null;
+      view.state = 'inDOM';
+    });
+
     return this;
   },
 
@@ -10688,16 +10749,27 @@ SC.View = SC.Object.extend(
   didInsertElement: SC.K,
 
   /**
+    Run this callback on the current view and recursively on child views.
+
+    @private
+  */
+  invokeRecursively: function(fn) {
+    fn.call(this, this);
+
+    this.forEachChildView(function(view) {
+      view.invokeRecursively(fn);
+    });
+  },
+
+  /**
     @private
 
     Invokes the receiver's willInsertElement() method if it exists and then
     invokes the same on all child views.
   */
   _notifyWillInsertElement: function() {
-    this.willInsertElement();
-
-    this.forEachChildView(function(view) {
-      view._notifyWillInsertElement();
+    this.invokeRecursively(function(view) {
+      view.willInsertElement();
     });
   },
 
@@ -10708,20 +10780,18 @@ SC.View = SC.Object.extend(
     invokes the same on all child views.
   */
   _notifyDidInsertElement: function() {
-    this.didInsertElement();
-
-    this.forEachChildView(function(view) {
-      view._notifyDidInsertElement();
+    this.invokeRecursively(function(view) {
+      view.didInsertElement();
     });
   },
 
   /**
-    Destroys any existing element along with the element for any child views 
-    as well. If the view does not currently have a element, then this method 
+    Destroys any existing element along with the element for any child views
+    as well. If the view does not currently have a element, then this method
     will do nothing.
 
-    If you implement willDestroyElement() on your view, then this method will 
-    be invoked on your view before your element is destroyed to give you a 
+    If you implement willDestroyElement() on your view, then this method will
+    be invoked on your view before your element is destroyed to give you a
     chance to clean up any event handlers, etc.
 
     If you write a willDestroyElement() handler, you can assume that your
@@ -10733,23 +10803,12 @@ SC.View = SC.Object.extend(
     @returns {SC.View} receiver
   */
   destroyElement: function() {
-    var elem = get(this, 'element');
-    if (elem) {
-      // Notify the view and its child views that the element is about to be
-      // destroyed.
-      this._notifyWillDestroyElement();
-
-      // Remove this DOM element from its parent.
-      SC.$(elem).remove();
-      set(this, 'element', null);
-    }
-
-    return this;
+    return this.invokeForState('destroyElement');
   },
 
   /**
-    Called when the element of the view is going to be destroyed. Override 
-    this function to do any teardown that requires an element, like removing 
+    Called when the element of the view is going to be destroyed. Override
+    this function to do any teardown that requires an element, like removing
     event listeners.
   */
   willDestroyElement: function() {},
@@ -10760,10 +10819,8 @@ SC.View = SC.Object.extend(
     Invokes the `willDestroyElement` callback on the view and child views.
   */
   _notifyWillDestroyElement: function() {
-    this.willDestroyElement();
-
-    this.forEachChildView(function(view) {
-      view._notifyWillDestroyElement();
+    this.invokeRecursively(function(view) {
+      view.willDestroyElement();
     });
   },
 
@@ -10773,12 +10830,12 @@ SC.View = SC.Object.extend(
       SC.propertyWillChange(view, 'element');
     });
   }.observesBefore('element'),
-  
+
   /**
     @private
 
     If this view's element changes, we need to invalidate the caches of our
-    child views so that we do not retain references to DOM elements that are 
+    child views so that we do not retain references to DOM elements that are
     no longer needed.
 
     @observes element
@@ -10791,7 +10848,7 @@ SC.View = SC.Object.extend(
 
   /**
     Called when the parentView property has changed.
-    
+
     @function
   */
   parentViewDidChange: SC.K,
@@ -10799,43 +10856,55 @@ SC.View = SC.Object.extend(
   /**
     @private
 
-    Renders to a buffer.
+    Invoked by the view system when this view needs to produce an HTML
+    representation. This method will create a new render buffer, if needed,
+    then apply any default attributes, such as class names and visibility.
+    Finally, the `render()` method is invoked, which is responsible for
+    doing the bulk of the rendering.
 
-    Rendering only happens for the initial rendering. Further updates happen 
-    in updateElement, and are not done to buffers, but to elements.
-    Note: You should not generally override nor directly call this method. 
-    This method is only called by createElement to set up the element 
-    initially, and by renderChildViews, to write to a buffer.
+    You should not need to override this method; instead, implement the
+    `template` property, or if you need more control, override the `render`
+    method.
 
     @param {SC.RenderBuffer} buffer the render buffer. If no buffer is
       passed, a default buffer, using the current view's `tagName`, will
       be used.
   */
-  renderToBuffer: function(parentBuffer) {
+  renderToBuffer: function(parentBuffer, bufferOperation) {
+    var viewMeta = meta(this)['SC.View'];
+    var buffer;
+
+    SC.run.sync();
+
+    // Determine where in the parent buffer to start the new buffer.
+    // By default, a new buffer will be appended to the parent buffer.
+    // The buffer operation may be changed if the child views array is
+    // mutated by SC.ContainerView.
+    bufferOperation = bufferOperation || 'begin';
+
+    // If this is the top-most view, start a new buffer. Otherwise,
+    // create a new buffer relative to the original using the
+    // provided buffer operation (for example, `insertAfter` will
+    // insert a new buffer after the "parent buffer").
     if (parentBuffer) {
-      var buffer = parentBuffer.begin(get(this, 'tagName'));
+      buffer = parentBuffer[bufferOperation](get(this, 'tagName'));
     } else {
-      var buffer = this.renderBuffer();
+      buffer = this.renderBuffer();
     }
 
-    var mixins, idx, len;
+    viewMeta.buffer = buffer;
+    this.state = 'inBuffer';
+
+    viewMeta.lengthBeforeRender = getPath(this, 'childViews.length');
 
     SC.beginPropertyChanges(this);
 
     this.applyAttributesToBuffer(buffer);
     this.render(buffer);
 
-    // If we've made it this far and renderChildViews() was never called,
-    // render any child views now.
-    if (!this._didRenderChildViews) { this.renderChildViews(buffer); }
-
-    // Reset the flag so that if the element is recreated we re-render the
-    // child views
-    this._didRenderChildViews = false;
-
     SC.endPropertyChanges(this);
 
-    if (parentBuffer) { buffer.end(); }
+    viewMeta.lengthAfterRender = getPath(this, 'childViews.length');
 
     return buffer;
   },
@@ -10865,27 +10934,6 @@ SC.View = SC.Object.extend(
     if (!get(this, 'isVisible')) {
       buffer.style('display', 'none');
     }
-  },
-
-  /**
-    Your render method should invoke this method to render any child views,
-    especially if this is the first time the view will be rendered. This will
-    walk down the childView chain, rendering all of the children in a nested
-    way.
-
-    @param {SC.RenderBuffer} buffer the buffer
-    @param {Boolean} firstName true if the element is being created
-    @returns {SC.RenderBuffer} the render buffer
-    @test in render
-  */
-  renderChildViews: function(buffer) {
-    this.forEachChildView(function(view) {
-      view.renderToBuffer(buffer);
-    });
-
-    this._didRenderChildViews = YES;
-
-    return buffer;
   },
 
   // ..........................................................
@@ -10997,6 +11045,8 @@ SC.View = SC.Object.extend(
       dispatch
   */
   init: function() {
+    this.state = 'preRender';
+
     var parentView = get(this, 'parentView');
 
     this._super();
@@ -11005,12 +11055,31 @@ SC.View = SC.Object.extend(
     // SC.RootResponder to dispatch incoming events.
     SC.View.views[get(this, 'elementId')] = this;
 
+    var childViews = get(this, 'childViews').slice();
     // setup child views. be sure to clone the child views array first
-    this.childViews = get(this, 'childViews').slice();
+    set(this, 'childViews', childViews);
+
+    this.mutateChildViews(function(viewName, idx) {
+      var view;
+
+      if ('string' === typeof viewName) {
+        view = this[viewName];
+        view = this.createChildView(view);
+        childViews[idx] = this[viewName] = view;
+      } else if (viewName.isClass) {
+        view = this.createChildView(viewName);
+        childViews[idx] = view;
+      }
+    });
+
     this.classNameBindings = get(this, 'classNameBindings').slice();
     this.classNames = get(this, 'classNames').slice();
 
-    this.createChildViews(); // setup child Views
+    meta(this)["SC.View"] = {};
+  },
+
+  appendChild: function(view, options) {
+    return this.invokeForState('appendChild', view, options);
   },
 
   /**
@@ -11070,85 +11139,37 @@ SC.View = SC.Object.extend(
     memory manager.
   */
   destroy: function() {
-    if (get(this, 'isDestroyed')) { return this; }
+    if (get(this, 'isDestroyed')) { return; }
+
+    // calling this._super() will nuke computed properties and observers,
+    // so collect any information we need before calling super.
+    var viewMeta   = meta(this)['SC.View'],
+        childViews = get(this, 'childViews'),
+        parent     = get(this, 'parentView'),
+        elementId  = get(this, 'elementId'),
+        childLen   = childViews.length;
 
     // destroy the element -- this will avoid each child view destroying
     // the element over and over again...
     this.destroyElement();
 
-    // first destroy any children.
-    this.mutateChildViews(function(view) {
-      view.destroy();
-    });
+    // remove from parent if found. Don't call removeFromParent,
+    // as removeFromParent will try to remove the element from
+    // the DOM again.
+    if (parent) { parent.removeChild(this); }
+
+    this._super();
+
+    for (var i=childLen-1; i>=0; i--) {
+      childViews[i].destroy();
+    }
 
     // next remove view from global hash
     delete SC.View.views[get(this, 'elementId')];
 
-    // remove from parent if found
-    if (get(this, 'parentView')) { this.removeFromParent(); }
+    this.state = 'destroyed';
 
-    //Do generic destroy. It takes care of mixins and sets isDestroyed to YES.
-    this._super();
     return this; // done with cleanup
-  },
-
-  /**
-    This method is called when your view is first created to setup any  child
-    views that are already defined on your class. If any are found, it will
-    instantiate them for you.
-
-    The default implementation of this method simply steps through your
-    childViews array, which is expects to either be empty or to contain View
-    designs that can be instantiated
-
-    Alternatively, you can implement this method yourself in your own
-    subclasses to look for views defined on specific properties and then build
-     a childViews array yourself.
-
-    Note that when you implement this method yourself, you should never
-    instantiate views directly. Instead, you should use
-    this.createChildView() method instead. This method can be much faster in
-    a production environment than creating views yourself.
-
-    @returns {SC.View} receiver
-  */
-  createChildViews: function() {
-    var childViews = get(this, 'childViews'),
-        len        = get(childViews, 'length'),
-        idx, key, views, view;
-
-    SC.beginPropertyChanges(this);
-
-    // swap the array
-    for (idx=0; idx<len; ++idx) {
-      key = view = childViews[idx];
-      if (key) {
-
-        // is this is a key name, lookup view class
-        if (typeof key === 'string') {
-          view = this[key];
-        } else {
-          key = null;
-        }
-
-        if (!view) {
-          //@if (debug)
-          SC.Logger.error ("No view with name " + key + " has been found in " + this.toString());
-          //@endif
-          // skip this one.
-          continue;
-        }
-
-        // createChildView creates the view if necessary, but also sets
-        // important properties, such as parentView
-        view = this.createChildView(view);
-        if (key) { this[key] = view; } // save on key name if passed
-      }
-      childViews[idx] = view;
-    }
-
-    SC.endPropertyChanges(this);
-    return this;
   },
 
   /**
@@ -11176,7 +11197,7 @@ SC.View = SC.Object.extend(
   /**
     @private
 
-    When the view's `isVisible` property changes, toggle the visibility 
+    When the view's `isVisible` property changes, toggle the visibility
     element of the actual DOM element.
   */
   _isVisibleDidChange: function() {
@@ -11185,9 +11206,364 @@ SC.View = SC.Object.extend(
 
 });
 
+/**
+  Describe how the specified actions should behave in the various
+  states that a view can exist in. Possible states:
+
+  * preRender: when a view is first instantiated, and after its
+    element was destroyed, it is in the preRender state
+  * inBuffer: once a view has been rendered, but before it has
+    been inserted into the DOM, it is in the inBuffer state
+  * inDOM: once a view has been inserted into the DOM it is in
+    the inDOM state. A view spends the vast majority of its
+    existence in this state.
+  * destroyed: once a view has been destroyed (using the destroy
+    method), it is in this state. No further actions can be invoked
+    on a destroyed view.
+*/
+SC.View.states = {
+  "default": {
+    // appendChild is only legal while rendering the buffer.
+    appendChild: function() {
+      throw "You can't use appendChild outside of the rendering process";
+    }
+  },
+
+  // in the destroyed state, everything is illegal
+  destroyed: {
+    appendChild: function() {
+      throw fmt(destroyedError, ['appendChild']);
+    },
+    rerender: function() {
+      throw fmt(destroyedError, ['rerender']);
+    },
+    destroyElement: function() {
+      throw fmt(destroyedError, ['destroyElement']);
+    },
+
+    // Since element insertion is scheduled, don't do anything if
+    // the view has been destroyed between scheduling and execution
+    insertElement: SC.K
+  },
+
+  // before rendering has begun, all legal manipulations are noops.
+  preRender: {
+    // a view leaves the preRender state once its element has been
+    // created (createElement).
+    insertElement: function(view, fn) {
+      // If we don't have an element, guarantee that it exists before
+      // invoking the willInsertElement event.
+      view.createElement();
+
+      view._notifyWillInsertElement();
+      fn.call(view);
+      view._notifyDidInsertElement();
+    }
+  },
+
+  // inside the buffer, legal manipulations are done on the buffer
+  inBuffer: {
+    // when a view is rendered in a buffer, rerendering it simply
+    // replaces the existing buffer with a new one
+    rerender: function(view) {
+      var viewMeta = meta(view)['SC.View'],
+          buffer = viewMeta.buffer;
+
+      view.renderToBuffer(buffer, 'replaceWith');
+    },
+
+    // when a view is rendered in a buffer, appending a child
+    // view will render that view and append the resulting
+    // buffer into its buffer.
+    appendChild: function(view, childView, options) {
+      var buffer = meta(view)['SC.View'].buffer;
+
+      childView = this.createChildView(childView, options);
+      view.childViews.pushObject(childView);
+      childView.renderToBuffer(buffer);
+      return childView;
+    },
+
+    // when a view is rendered in a buffer, destroying the
+    // element will simply destroy the buffer and put the
+    // state back into the preRender state.
+    destroyElement: function(view) {
+      meta(view)['SC.View'].buffer.remove();
+
+      view.invokeRecursively(function(view) {
+        var viewMeta = meta(view)['SC.View'];
+        viewMeta.buffer = null;
+
+        view.willDestroyElement();
+
+        this.invokeRecursively(function(view) {
+          view.state = 'preRender';
+        });
+      });
+
+      return view;
+    },
+
+    // It should be impossible for a rendered view to be scheduled for
+    // insertion.
+    insertElement: function() {
+      throw "You can't insert an element that has already been rendered";
+    }
+  },
+
+  // once the view has been inserted into the DOM, legal manipulations
+  // are done on the DOM element.
+  inDOM: {
+
+    // once the view has been inserted into the DOM, rerendering is
+    // deferred to allow bindings to synchronize.
+    rerender: function(view) {
+      var viewMeta = meta(this)['SC.View'], element = get(view, 'element');
+
+      set(view, 'element', null);
+      view.state = 'preRender';
+
+      var lengthBefore = viewMeta.lengthBeforeRender,
+          lengthAfter  = viewMeta.lengthAfterRender;
+
+      // If there were child views created during the last call to render(),
+      // remove them under the assumption that they will be re-created when
+      // we re-render.
+
+      // VIEW-TODO: Unit test this path.
+      if (lengthBefore < lengthAfter) {
+        var childViews = get(view, 'childViews');
+        childViews.replace(lengthBefore, lengthAfter - lengthBefore);
+      }
+
+      view._insertElementLater(function() {
+        SC.$(element).replaceWith(get(this, 'element'));
+      });
+    },
+
+    // once the view is already in the DOM, destroying it removes it
+    // from the DOM, nukes its element, and puts it back into the
+    // preRender state.
+    destroyElement: function(view) {
+      var elem = get(this, 'element');
+
+      view.invokeRecursively(function(view) {
+        var elem = get(this, 'element');
+        this.willDestroyElement();
+
+        view.state = 'preRender';
+        set(view, 'element', null);
+      });
+
+      SC.$(elem).remove();
+      return view;
+    },
+
+    // You shouldn't insert an element into the DOM that was already
+    // inserted into the DOM.
+    insertElement: function() {
+      throw "You can't insert an element into the DOM that has already been inserted";
+    }
+  }
+};
+
+SC.View.reopen({
+  states: SC.View.states
+});
+
 // Create a global view hash.
 SC.View.views = {};
 
+
+})({});
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore - JavaScript Application Framework
+// Copyright: ©2006-2011 Strobe Inc. and contributors.
+//            Portions ©2008-2011 Apple Inc. All rights reserved.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+var get = SC.get, set = SC.set, meta = SC.meta;
+
+SC.ContainerView = SC.View.extend({
+  /**
+    Extends SC.View's implementation of renderToBuffer to
+    set up an array observer on the child views array. This
+    observer will detect when child views are added or removed
+    and update the DOM to reflect the mutation.
+
+    Note that we set up this array observer in the `renderToBuffer`
+    method because any views set up previously will be rendered the first
+    time the container is rendered.
+
+    @private
+  */
+  renderToBuffer: function() {
+    var ret = this._super.apply(this, arguments);
+
+    get(this, 'childViews').addArrayObserver(this, {
+      willChange: 'childViewsWillChange',
+      didChange: 'childViewsDidChange'
+    });
+
+    return ret;
+  },
+
+  /**
+    Instructs each child view to render to the passed render buffer.
+
+    @param {SC.RenderBuffer} buffer the buffer to render to
+    @private
+  */
+  render: function(buffer) {
+    this.forEachChildView(function(view) {
+      view.renderToBuffer(buffer);
+    });
+  },
+
+  /**
+    When the container view is destroyer, tear down the child views
+    array observer.
+
+    @private
+  */
+  destroy: function() {
+    get(this, 'childViews').removeArrayObserver(this, {
+      willChange: 'childViewsWillChange',
+      didChange: 'childViewsDidChange'
+    });
+
+    this._super();
+  },
+
+  /**
+    When a child view is removed, destroy its element so that
+    it is removed from the DOM.
+
+    The array observer that triggers this action is set up in the
+    `renderToBuffer` method.
+
+    @private
+    @param {SC.Array} views the child views array before mutation
+    @param {Number} start the start position of the mutation
+    @param {Number} removed the number of child views removed
+  **/
+  childViewsWillChange: function(views, start, removed) {
+    this.invokeForState('childViewsWillChange', views, start, removed);
+  },
+
+  /**
+    When a child view is added, make sure the DOM gets updated appropriately.
+
+    If the view has already rendered an element, we tell the child view to
+    create an element and insert it into the DOM. If the enclosing container view
+    has already written to a buffer, but not yet converted that buffer into an
+    element, we insert the string representation of the child into the appropriate
+    place in the buffer.
+
+    @private
+    @param {SC.Array} views the array of child views afte the mutation has occurred
+    @param {Number} start the start position of the mutation
+    @param {Number} removed the number of child views removed
+    @param {Number} the number of child views added
+  */
+  childViewsDidChange: function(views, start, removed, added) {
+    var len = get(views, 'length');
+
+    // No new child views were added; bail out.
+    if (added === 0) return;
+
+    // Let the current state handle the changes
+    this.invokeForState('childViewsDidChange', views, start, added);
+  },
+
+  /**
+    Schedules a child view to be inserted into the DOM after bindings have
+    finished syncing for this run loop.
+
+    @param {SC.View} view the child view to insert
+    @param {SC.View} prev the child view after which the specified view should
+                     be inserted
+    @private
+  */
+  _scheduleInsertion: function(view, prev) {
+    var parent = this;
+
+    view._insertElementLater(function() {
+      if (prev) {
+        prev.$().after(view.$());
+      } else {
+        parent.$().prepend(view.$());
+      }
+    });
+  }
+});
+
+// SC.ContainerView extends the default view states to provide different
+// behavior for childViewsWillChange and childViewsDidChange.
+SC.ContainerView.states = {
+  parent: SC.View.states,
+
+  "default": {},
+
+  inBuffer: {
+    childViewsDidChange: function(parentView, views, start, added) {
+      var buffer = meta(parentView)['SC.View'].buffer,
+          startWith, prev, prevBuffer, view;
+
+      // Determine where to begin inserting the child view(s) in the
+      // render buffer.
+      if (start === 0) {
+        // If views were inserted at the beginning, prepend the first
+        // view to the render buffer, then begin inserting any
+        // additional views at the beginning.
+        view = views[start];
+        startWith = start + 1;
+        view.renderToBuffer(buffer, 'prepend');
+      } else {
+        // Otherwise, just insert them at the same place as the child
+        // views mutation.
+        view = views[start - 1];
+        startWith = start;
+      }
+
+      for (var i=startWith; i<start+added; i++) {
+        prev = view;
+        view = views[i];
+        prevBuffer = meta(prev)['SC.View'].buffer;
+        view.renderToBuffer(prevBuffer, 'insertAfter');
+      }
+    }
+  },
+
+  inDOM: {
+    childViewsWillChange: function(view, views, start, removed) {
+      for (var i=start; i<start+removed; i++) {
+        views[i].destroyElement();
+      }
+    },
+
+    childViewsDidChange: function(view, views, start, added) {
+      // If the DOM element for this container view already exists,
+      // schedule each child view to insert its DOM representation after
+      // bindings have finished syncing.
+      prev = start === 0 ? null : views[start-1];
+
+      for (var i=start; i<start+added; i++) {
+        view = views[i];
+        this._scheduleInsertion(view, prev);
+        prev = view;
+      }
+    }
+  }
+};
+
+SC.ContainerView.reopen({
+  states: SC.ContainerView.states
+});
 
 })({});
 
@@ -11207,7 +11583,7 @@ var get = SC.get, set = SC.set;
   @since SproutCore 2.0
   @extends SC.View
 */
-SC.CollectionView = SC.View.extend(
+SC.CollectionView = SC.ContainerView.extend(
 /** @scope SC.CollectionView.prototype */ {
 
   /**
@@ -11232,28 +11608,18 @@ SC.CollectionView = SC.View.extend(
   */
   itemViewClass: SC.View,
 
-  /**
-    @private
-
-    Once the element was inserted, schedule the child elements
-    to be updated. In this case, they will be inserted for the
-    first time. Defer this to give any content binding a chance
-    to sync.
-  */
-  didInsertElement: function() {
-    SC.run.schedule('render', this, this._updateChildrenIfNeeded);
+  init: function() {
+    var ret = this._super();
+    this._contentDidChange();
+    return ret;
   },
 
-  /**
-    @private
+  _contentWillChange: function() {
+    var content = this.get('content');
 
-    When the content property changes, schedule the child elements
-    to be updated. Schedule it to give the element a chance to
-    be inserted.
-  */
-  _sctcv_contentDidChange: function() {
-    SC.run.schedule('render', this, this._updateChildrenIfNeeded);
-  }.observes('content'),
+    if (content) { content.removeArrayObserver(this); }
+    this.arrayWillChange(content, 0, get(content, 'length'));
+  }.observesBefore('content'),
 
   /**
     @private
@@ -11263,69 +11629,39 @@ SC.CollectionView = SC.View.extend(
     asynchronously, to allow the element to be created before
     bindings have synchronized and vice versa.
   */
-  _updateChildrenIfNeeded: function() {
-    var oldContent = this._sccv_content,
-        content = get(this, 'content');
+  _contentDidChange: function() {
+    var content = get(this, 'content');
 
-    if (oldContent === content) { return; }
-
-    this._updateChildren();
-  },
-
-  /**
-    @private
-
-    Replace the current children, if any, by creating an
-    instance of the item view for each element in the Array.
-  */
-  _updateChildren: function() {
-    var oldContent = this._sccv_content,
-        content = get(this, 'content'),
-        oldLen = 0, newLen = 0;
-
-    this.$().empty();
-
-    if (oldContent) {
-      oldContent.removeArrayObserver(this);
-      oldLen = get(oldContent, 'length');
-    }
-
-    if (content) {
-      content.addArrayObserver(this);
-      newLen = get(content, 'length');
-    }
-
-    this.arrayWillChange(oldContent, 0, oldLen, newLen);
-    this._sccv_content = content;
-    this.arrayDidChange(content, 0, oldLen, newLen);
-  },
+    if (content) { content.addArrayObserver(this); }
+    this.arrayDidChange(content, 0, null, get(content, 'length'));
+  }.observes('content'),
 
   destroy: function() {
-    set(this, 'content', null);
-    return this._super();
+    var content = get(this, 'content');
+    if (content) { content.removeArrayObserver(this); }
+
+    this._super();
+
+    return this;
   },
 
-  arrayWillChange: function(content, start, removedCount, addedCount) {
-    if (!get(this, 'element')) { return; }
+  arrayWillChange: function(content, start, removedCount) {
+    // If the contents were empty before and this template collection has an
+    // empty view remove it now.
+    var emptyView = get(this, 'emptyView');
+    if (emptyView && emptyView instanceof SC.View) {
+      emptyView.removeFromParent();
+    }
 
-    SC.run.schedule('render', this, function() {
-      // If the contents were empty before and this template collection has an
-      // empty view remove it now.
-      var emptyView = get(this, 'emptyView');
-      if (emptyView && !SC.Object.detect(emptyView)) {
-        emptyView.removeFromParent();
-      }
+    // Loop through child views that correspond with the removed items.
+    // Note that we loop from the end of the array to the beginning because
+    // we are mutating it as we go.
+    var childViews = get(this, 'childViews'), childView, idx, len;
 
-      // Loop through child views that correspond with the removed items.
-      // Note that we loop from the end of the array to the beginning because
-      // we are mutating it as we go.
-      var childViews = get(this, 'childViews'), childView, idx, len;
-
-      len = get(childViews, 'length');
-      for (idx = start + removedCount - 1; idx >= start; idx--) {
-        childViews[idx].destroy();
-      }
-    });
+    len = get(childViews, 'length');
+    for (idx = start + removedCount - 1; idx >= start; idx--) {
+      childViews[idx].destroy();
+    }
   },
 
   /**
@@ -11346,72 +11682,32 @@ SC.CollectionView = SC.View.extend(
       the index at which the changes occurred
   */
   arrayDidChange: function(content, start, removed, added) {
-    if (!get(this, 'element')) { return; }
-
-    SC.run.schedule('render', this, function() {
-      this._updateElements(content, start, removed, added);
-    });
-  },
-
-  _updateElements: function(content, start, removed, added) {
     var itemViewClass = get(this, 'itemViewClass'),
         childViews = get(this, 'childViews'),
-        addedViews = [],
-        renderFunc, view, childView, itemOptions, elem,
-        insertAtElement, item, fragment, idx, len;
+        addedViews = [], view, item, idx, len;
 
-    elem = this.$();
+    len = content ? get(content, 'length') : 0;
+    if (len) {
+      for (idx = start; idx < start+added; idx++) {
+        item = content.objectAt(idx);
 
-    if (content) {
-      var addedObjects = content.slice(start, start+added);
-
-      childView = childViews.objectAt(start - 1);
-      insertAtElement = childView ? childView.$() : null;
-
-      len = get(addedObjects, 'length');
-
-      var buffer = "";
-
-      for (idx = 0; idx < len; idx++) {
-        item = addedObjects.objectAt(idx);
         view = this.createChildView(itemViewClass, {
           content: item,
           contentIndex: idx
         });
 
-        buffer = buffer + view.renderToBuffer().string();
-
         addedViews.push(view);
       }
 
-      fragment = SC.$(buffer);
-
-      addedViews.forEach(function(view) {
-        view._notifyWillInsertElement();
-      });
-
-      if (!insertAtElement) {
-        elem.append(fragment);
-      } else {
-        fragment.insertAfter(insertAtElement);
-      }
-
       childViews.replace(start, 0, addedViews);
-
-      addedViews.forEach(function(view) {
-        view._notifyDidInsertElement();
-      });
-    }
-
-    var emptyView = get(this, 'emptyView');
-    if (get(childViews, 'length') === 0 && emptyView) {
-      if (SC.Object.detect(emptyView)) {
+    } else {
+      var emptyView = get(this, 'emptyView');
+      if (get(childViews, 'length') === 0 && emptyView) {
         emptyView = this.createChildView(emptyView);
-      }
+        set(this, 'emptyView', emptyView);
 
-      set(this, 'emptyView', emptyView);
-      emptyView.createElement().$().appendTo(elem);
-      set(this, 'childViews', [emptyView]);
+        childViews.replace(0, get(childViews, 'length'), [emptyView]);
+      }
     }
   }
 });
@@ -11427,6 +11723,7 @@ SC.CollectionView = SC.View.extend(
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
+
 
 
 })({});
@@ -12035,25 +12332,6 @@ SC._BindableSpanView = SC.View.extend(
     }
 
     return this._super(buffer);
-  },
-
-  /**
-    Called when the property associated with this `<span>` changes.
-
-    We destroy all registered children, then render the view again and insert
-    it into DOM.
-  */
-  rerender: function() {
-    this.destroyAllChildren();
-
-    // Store a reference to the current element so that
-    // it can be replaced in-line in the DOM.
-    var oldElem = this.$();
-    set(this, 'element', null);
-
-    this._insertElementLater(function() {
-      oldElem.replaceWith(get(this, 'element'));
-    });
   }
 });
 
@@ -12069,7 +12347,7 @@ SC._BindableSpanView = SC.View.extend(
 /*globals Handlebars */
 
 
-var get = SC.get, getPath = SC.getPath;
+var get = SC.get, getPath = SC.getPath, fmt = SC.String.fmt;
 
 (function() {
   // Binds a property into the DOM. This will create a hook in DOM that the
@@ -12098,7 +12376,7 @@ var get = SC.get, getPath = SC.getPath;
 
       var observer, invoker;
 
-      get(view, 'childViews').pushObject(bindView);
+      view.appendChild(bindView);
 
       observer = function() {
         if (get(bindView, 'element')) {
@@ -12118,8 +12396,6 @@ var get = SC.get, getPath = SC.getPath;
       // Observes the given property on the context and
       // tells the SC._BindableSpan to re-render.
       SC.addObserver(ctx, property, invoker);
-
-      bindView.renderToBuffer(data.buffer);
     } else {
       // The object is not observable, so just render it out and
       // be done with it.
@@ -12139,14 +12415,17 @@ var get = SC.get, getPath = SC.getPath;
     DOM. Note that if you need to support IE7 and IE8 you must modify the 
     model objects properties using SC.get() and SC.set() for this to work as 
     it relies on SC's KVO system.  For all other browsers this will be handled
-    for you automatically.  
+    for you automatically.
 
+    @private
     @name Handlebars.helpers.bind
     @param {String} property Property to bind
     @param {Function} fn Context to provide for rendering
     @returns {String} HTML string
   */
   Handlebars.registerHelper('bind', function(property, fn) {
+    sc_assert("You cannot pass more than one argument to the bind helper", arguments.length <= 2);
+
     return bind.call(this, property, fn, false, function(result) {
       return !SC.none(result);
     });
@@ -12160,23 +12439,20 @@ var get = SC.get, getPath = SC.getPath;
           {{content.title}}
         {{/boundIf}}
 
+    @private
     @name Handlebars.helpers.boundIf
     @param {String} property Property to bind
     @param {Function} fn Context to provide for rendering
     @returns {String} HTML string
   */
   Handlebars.registerHelper('boundIf', function(property, fn) {
-    if(fn) {
-      return bind.call(this, property, fn, true, function(result) {
-        if (SC.typeOf(result) === 'array') {
-          return get(result, 'length') !== 0;
-        } else {
-          return !!result;
-        }
-      } );
-    } else {
-      throw new SC.Error("Cannot use boundIf helper without a block.");
-    }
+    return bind.call(this, property, fn, true, function(result) {
+      if (SC.typeOf(result) === 'array') {
+        return get(result, 'length') !== 0;
+      } else {
+        return !!result;
+      }
+    } );
   });
 })();
 
@@ -12187,6 +12463,9 @@ var get = SC.get, getPath = SC.getPath;
   @returns {String} HTML string
 */
 Handlebars.registerHelper('with', function(context, options) {
+  sc_assert("You must pass exactly one argument to the with helper", arguments.length == 2);
+  sc_assert("You must pass a block to the with helper", options.fn && options.fn !== Handlebars.VM.noop);
+
   return Handlebars.helpers.bind.call(options.contexts[0], context, options);
 });
 
@@ -12198,6 +12477,9 @@ Handlebars.registerHelper('with', function(context, options) {
   @returns {String} HTML string
 */
 Handlebars.registerHelper('if', function(context, options) {
+  sc_assert("You must pass exactly one argument to the if helper", arguments.length == 2);
+  sc_assert("You must pass a block to the if helper", options.fn && options.fn !== Handlebars.VM.noop);
+
   return Handlebars.helpers.boundIf.call(options.contexts[0], context, options);
 });
 
@@ -12208,6 +12490,9 @@ Handlebars.registerHelper('if', function(context, options) {
   @returns {String} HTML string
 */
 Handlebars.registerHelper('unless', function(context, options) {
+  sc_assert("You must pass exactly one argument to the unless helper", arguments.length == 2);
+  sc_assert("You must pass a block to the unless helper", options.fn && options.fn !== Handlebars.VM.noop);
+
   var fn = options.fn, inverse = options.inverse;
 
   options.fn = inverse;
@@ -12229,6 +12514,9 @@ Handlebars.registerHelper('unless', function(context, options) {
 Handlebars.registerHelper('bindAttr', function(options) {
 
   var attrs = options.hash;
+
+  sc_assert("You must specify at least one hash argument to bindAttr", !!SC.keys(attrs).length);
+
   var view = options.data.view;
   var ret = [];
   var ctx = this;
@@ -12252,12 +12540,20 @@ Handlebars.registerHelper('bindAttr', function(options) {
   // current value of the property as an attribute.
   attrKeys.forEach(function(attr) {
     var property = attrs[attr];
+
+    sc_assert(fmt("You must provide a String for a bound attribute, not %@", [property]), typeof property === 'string');
+
     var value = getPath(ctx, property);
+
+    sc_assert(fmt("Attributes must be numbers, strings or booleans, not %@", [value]), value == null || typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean');
 
     var observer, invoker;
 
     observer = function observer() {
       var result = getPath(ctx, property);
+
+      sc_assert(fmt("Attributes must be numbers, strings or booleans, not %@", [result]), result == null || typeof result === 'number' || typeof result === 'string' || typeof result === 'boolean');
+
       var elem = view.$("[data-handlebars-id='" + dataId + "']");
 
       // If we aren't able to find the element, it means the element
@@ -12273,11 +12569,11 @@ Handlebars.registerHelper('bindAttr', function(options) {
 
       // A false result will remove the attribute from the element. This is
       // to support attributes such as disabled, whose presence is meaningful.
-      if (result === NO && currentValue) {
+      if (result === false && currentValue) {
         elem.removeAttr(attr);
 
       // Likewise, a true result will set the attribute's name as the value.
-      } else if (result === YES && currentValue !== attr) {
+      } else if (result === true && currentValue !== attr) {
         elem.attr(attr, attr);
 
       } else if (currentValue !== result) {
@@ -12295,12 +12591,12 @@ Handlebars.registerHelper('bindAttr', function(options) {
     SC.addObserver(ctx, property, invoker);
 
     // Use the attribute's name as the value when it is YES
-    if (value === YES) {
+    if (value === true) {
       value = attr;
     }
 
     // Do not add the attribute when the value is false
-    if (value !== NO) {
+    if (value !== false) {
       // Return the current value, in the form src="foo.jpg"
       ret.push(attr + '="' + value + '"');
     }
@@ -12445,7 +12741,7 @@ var get = SC.get, set = SC.set;
 
 /** @private */
 SC.Handlebars.ViewHelper = SC.Object.create({
-  
+
   viewClassFromHTMLOptions: function(viewClass, options) {
     var extensions = {},
         classes = options['class'],
@@ -12487,27 +12783,23 @@ SC.Handlebars.ViewHelper = SC.Object.create({
 
     if ('string' === typeof path) {
       newView = SC.getPath(thisContext, path);
-      if (!newView) { 
-        throw new SC.Error("Unable to find view at path '" + path + "'"); 
-      }
+      sc_assert("Unable to find view at path '" + path + "'", !!newView);
     } else {
-      sc_assert('You must pass a string or a view class to the #view helper', SC.View.detect(path));
       newView = path;
     }
 
-    sc_assert("Null or undefined object was passed to the #view helper. Did you mean to pass a property path string?", !!newView);
+    sc_assert(SC.String.fmt('You must pass a view class to the #view helper, not %@ (%@)', [path, newView]), SC.View.detect(newView));
 
     newView = this.viewClassFromHTMLOptions(newView, hash);
     var currentView = data.view;
+    var viewOptions = {};
 
-    var childViews = get(currentView, 'childViews');
-    var childView = currentView.createChildView(newView);
+    if (fn) {
+      sc_assert("You cannot provide a template block if you also specified a templateName", !get(viewOptions, 'templateName') && !newView.PrototypeMixin.keys().indexOf('templateName') >= 0);
+      viewOptions.template = fn;
+    }
 
-    // Set the template of the view to the passed block if we got one
-    if (fn) { set(childView, 'template', fn); }
-
-    childViews.pushObject(childView);
-    childView.renderToBuffer(data.buffer);
+    currentView.appendChild(newView, viewOptions);
   }
 });
 
@@ -12518,6 +12810,8 @@ SC.Handlebars.ViewHelper = SC.Object.create({
   @returns {String} HTML string
 */
 Handlebars.registerHelper('view', function(path, options) {
+  sc_assert("The view helper only takes a single argument", arguments.length <= 2);
+
   // If no path is provided, treat path param as options.
   if (path && path.data && path.data.isRenderData) {
     options = path;
