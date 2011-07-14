@@ -3112,6 +3112,12 @@ function invokeEvents(targets, params) {
   }
 }
 
+/**
+  The parameters passed to an event listener are not exactly the
+  parameters passed to an observer. if you pass an xform function, it will
+  be invoked and is able to translate event listener parameters into the form
+  that observers are expecting.
+*/
 function addListener(obj, eventName, target, method, xform) {
   if (!method && 'function'===typeof target) {
     method = target;
@@ -3796,6 +3802,10 @@ SC.watch = function(obj, keyName) {
     watching[keyName] = (watching[keyName]||0)+1;
   }
   return this;
+};
+
+SC.isWatching = function(obj, keyName) {
+  return !!meta(obj).watching[keyName];
 };
 
 SC.watch.flushPending = flushPendingChains;
@@ -5910,7 +5920,7 @@ SC.Enumerable = SC.Mixin.create( /** @lends SC.Enumerable */ {
 // HELPERS
 // 
 
-var get = SC.get, set = SC.set;
+var get = SC.get, set = SC.set, meta = SC.meta;
 
 function none(obj) { return obj===null || obj===undefined; }
 
@@ -6179,6 +6189,9 @@ SC.Array = SC.Mixin.create(SC.Enumerable, /** @scope SC.Array.prototype */ {
     }
     
     this.enumerableContentWillChange(removing, addAmt);
+
+    // Make sure the @each proxy is set up if anyone is observing @each
+    if (SC.isWatching(this, '@each')) { get(this, '@each'); }
     return this;
   },
   
@@ -9166,7 +9179,7 @@ SC.bind = function(obj, to, from) {
 
 
 var set = SC.set, get = SC.get, guidFor = SC.guidFor;
-  
+
 var EachArray = SC.Object.extend(SC.Array, {
 
   init: function(content, keyName, owner) {
@@ -9180,12 +9193,12 @@ var EachArray = SC.Object.extend(SC.Array, {
     var item = this._content.objectAt(idx);
     return item && get(item, this._keyName);
   },
-  
+
   length: function() {
     var content = this._content;
     return content ? get(content, 'length') : 0;
   }.property('[]').cacheable()
-  
+
 });
 
 var IS_OBSERVER = /^.+:(before|change)$/;
@@ -9193,13 +9206,13 @@ var IS_OBSERVER = /^.+:(before|change)$/;
 function addObserverForContentKey(content, keyName, proxy, idx, loc) {
   var objects = proxy._objects, guid;
   if (!objects) objects = proxy._objects = {};
-  
+
   while(--loc>=idx) {
     var item = content.objectAt(loc);
     if (item) {
       SC.addBeforeObserver(item, keyName, proxy, 'contentKeyWillChange');
       SC.addObserver(item, keyName, proxy, 'contentKeyDidChange');
-      
+
       // keep track of the indicies each item was found at so we can map
       // it back when the obj changes.
       guid = guidFor(item);
@@ -9213,13 +9226,13 @@ function removeObserverForContentKey(content, keyName, proxy, idx, loc) {
   var objects = proxy._objects;
   if (!objects) objects = proxy._objects = {};
   var indicies, guid;
-  
+
   while(--loc>=idx) {
     var item = content.objectAt(loc);
     if (item) {
       SC.removeBeforeObserver(item, keyName, proxy, 'contentKeyWillChange');
       SC.removeObserver(item, keyName, proxy, 'contentKeyDidChange');
-      
+
       guid = guidFor(item);
       indicies = objects[guid];
       indicies[indicies.indexOf(loc)] = null;
@@ -9232,22 +9245,22 @@ function removeObserverForContentKey(content, keyName, proxy, idx, loc) {
   @class
 
   This is the object instance returned when you get the @each property on an
-  array.  It uses the unknownProperty handler to automatically create 
+  array.  It uses the unknownProperty handler to automatically create
   EachArray instances for property names.
-  
+
   @extends SC.Object
 */
 SC.EachProxy = SC.Object.extend({
-  
+
   init: function(content) {
     this._super();
     this._content = content;
     content.addArrayObserver(this);
 
-    // in case someone is already observing some keys make sure they are 
+    // in case someone is already observing some keys make sure they are
     // added
-    SC.watchedEvents(this).forEach(function(eventName) { 
-      this.didAddListener(eventName); 
+    SC.watchedEvents(this).forEach(function(eventName) {
+      this.didAddListener(eventName);
     }, this);
   },
 
@@ -9258,20 +9271,18 @@ SC.EachProxy = SC.Object.extend({
   unknownProperty: function(keyName) {
     var ret;
     ret = new EachArray(this._content, keyName, this);
-    set(this, keyName, ret); 
+    set(this, keyName, ret);
     this.beginObservingContentKey(keyName);
     return ret;
   },
 
   // ..........................................................
   // ARRAY CHANGES
-  // Invokes whenever the content array itself changes.  
-  
+  // Invokes whenever the content array itself changes.
+
   arrayWillChange: function(content, idx, removedCnt, addedCnt) {
     var keys = this._keys, key, array, lim;
-    
-    if (!keys) return ; // nothing to do
-    
+
     lim = removedCnt>0 ? idx+removedCnt : -1;
     SC.beginPropertyChanges(this);
     for(key in keys) {
@@ -9283,13 +9294,13 @@ SC.EachProxy = SC.Object.extend({
       SC.propertyWillChange(this, key);
       if (array) array.arrayContentWillChange(idx, removedCnt, addedCnt);
     }
+
+    SC.propertyWillChange(this._content, '@each');
     SC.endPropertyChanges(this);
   },
-  
+
   arrayDidChange: function(content, idx, removedCnt, addedCnt) {
     var keys = this._keys, key, array, lim;
-    
-    if (!keys) return ; // nothing to do
 
     lim = addedCnt>0 ? idx+addedCnt : -1;
     SC.beginPropertyChanges(this);
@@ -9297,24 +9308,25 @@ SC.EachProxy = SC.Object.extend({
       if (!keys.hasOwnProperty(key)) continue;
 
       if (lim>0) addObserverForContentKey(content, key, this, idx, lim);
-      
+
       array = get(this, key);
       if (array) array.arrayContentDidChange(idx, removedCnt, addedCnt);
       SC.propertyDidChange(this, key);
     }
+    SC.propertyDidChange(this._content, '@each');
     SC.endPropertyChanges(this);
   },
-  
+
   // ..........................................................
   // LISTEN FOR NEW OBSERVERS AND OTHER EVENT LISTENERS
   // Start monitoring keys based on who is listening...
-  
+
   didAddListener: function(eventName) {
     if (IS_OBSERVER.test(eventName)) {
       this.beginObservingContentKey(eventName.slice(0, -7));
     }
   },
-  
+
   didRemoveListener: function(eventName) {
     if (IS_OBSERVER.test(eventName)) {
       this.stopObservingContentKey(eventName.slice(0, -7));
@@ -9324,20 +9336,20 @@ SC.EachProxy = SC.Object.extend({
   // ..........................................................
   // CONTENT KEY OBSERVING
   // Actual watch keys on the source content.
-  
+
   beginObservingContentKey: function(keyName) {
     var keys = this._keys;
     if (!keys) keys = this._keys = {};
     if (!keys[keyName]) {
       keys[keyName] = 1;
-      var content = this._content, 
+      var content = this._content,
           len = get(content, 'length');
       addObserverForContentKey(content, keyName, this, 0, len);
     } else {
       keys[keyName]++;
     }
   },
-  
+
   stopObservingContentKey: function(keyName) {
     var keys = this._keys;
     if (keys && (keys[keyName]>0) && (--keys[keyName]<=0)) {
@@ -9346,32 +9358,31 @@ SC.EachProxy = SC.Object.extend({
       removeObserverForContentKey(content, keyName, this, 0, len);
     }
   },
-  
+
   contentKeyWillChange: function(obj, keyName) {
     // notify array.
-    var indexes = this._objects[guidFor(obj)], 
+    var indexes = this._objects[guidFor(obj)],
         array   = get(this, keyName),
         len = array && indexes ? indexes.length : 0, idx;
-        
+
     for(idx=0;idx<len;idx++) {
       array.arrayContentWillChange(indexes[idx], 1, 1);
     }
   },
-  
+
   contentKeyDidChange: function(obj, keyName) {
     // notify array.
-    var indexes = this._objects[guidFor(obj)], 
+    var indexes = this._objects[guidFor(obj)],
         array   = get(this, keyName),
         len = array && indexes ? indexes.length : 0, idx;
-        
+
     for(idx=0;idx<len;idx++) {
       array.arrayContentDidChange(indexes[idx], 1, 1);
     }
 
     SC.propertyDidChange(this, keyName);
   }
-  
-  
+
 });
 
 
@@ -9611,17 +9622,6 @@ SC._RenderBuffer = SC.Object.extend(
   elementAttributes: null,
 
   /**
-    An array of strings which defines the body of the element.
-
-    You should not maintain this array yourself, rather, you should use
-    the push() method of SC.RenderBuffer.
-
-    @type Array
-    @default []
-  */
-  elementContent: null,
-
-  /**
     The tagname of the element an instance of SC.RenderBuffer represents.
 
     Usually, this gets set as the first parameter to SC.RenderBuffer. For
@@ -9663,7 +9663,6 @@ SC._RenderBuffer = SC.Object.extend(
     set(this ,'elementClasses', []);
     set(this, 'elementAttributes', {});
     set(this, 'elementStyle', {});
-    set(this, 'elementContent', []);
     set(this, 'childBuffers', []);
     set(this, 'elements', {});
   },
@@ -9860,8 +9859,8 @@ SC._RenderBuffer = SC.Object.extend(
         classes = get(this, 'elementClasses'),
         attrs = get(this, 'elementAttributes'),
         style = get(this, 'elementStyle'),
-        content = get(this, 'elementContent'),
         tag = get(this, 'elementTag'),
+        content = '',
         styleBuffer = [], prop;
 
     var openTag = ["<" + tag];
@@ -9886,8 +9885,6 @@ SC._RenderBuffer = SC.Object.extend(
     }
 
     openTag = openTag.join(" ") + '>';
-
-    content = content.join("");
 
     var childBuffers = get(this, 'childBuffers');
 
@@ -10009,17 +10006,12 @@ SC.EventDispatcher = SC.Object.extend(
           result = true, handler;
 
       SC.run(function() {
-        while (result !== false && view) {
-          handler = view[eventName];
-          if (SC.typeOf(handler) === 'function') {
-            result = handler.call(view, evt);
-          }
-
-          view = get(view, 'parentView');
+        handler = view[eventName];
+        if (SC.typeOf(handler) === 'function') {
+          result = handler.call(view, evt);
         }
       });
 
-      evt.stopPropagation();
       return result;
     });
   },
@@ -10708,7 +10700,7 @@ SC.View = SC.Object.extend(
     @returns {SC.RenderBuffer}
   */
   renderBuffer: function(tagName) {
-    return SC.RenderBuffer(tagName || get(this, 'tagName'));
+    return SC.RenderBuffer(tagName || get(this, 'tagName') || 'div');
   },
 
   /**
@@ -10887,7 +10879,7 @@ SC.View = SC.Object.extend(
     // provided buffer operation (for example, `insertAfter` will
     // insert a new buffer after the "parent buffer").
     if (parentBuffer) {
-      buffer = parentBuffer[bufferOperation](get(this, 'tagName'));
+      buffer = parentBuffer[bufferOperation](get(this, 'tagName') || 'div');
     } else {
       buffer = this.renderBuffer();
     }
@@ -10945,10 +10937,15 @@ SC.View = SC.Object.extend(
     an element is first created. If you change the tagName for an element, you
     must destroy and recreate the view element.
 
+    By default, the render buffer will use a `<div>` tag for views.
+
     @type String
-    @default 'div'
+    @default null
   */
-  tagName: 'div',
+
+  // We leave this null by default so we can tell the difference between
+  // the default case and a user-specified tag.
+  tagName: null,
 
   /**
     The WAI-ARIA role of the control represented by this view. For example, a
@@ -11576,7 +11573,8 @@ SC.ContainerView.reopen({
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get, set = SC.set;
+
+var get = SC.get, set = SC.set, fmt = SC.String.fmt;
 
 /**
   @class
@@ -11684,7 +11682,9 @@ SC.CollectionView = SC.ContainerView.extend(
   arrayDidChange: function(content, start, removed, added) {
     var itemViewClass = get(this, 'itemViewClass'),
         childViews = get(this, 'childViews'),
-        addedViews = [], view, item, idx, len;
+        addedViews = [], view, item, idx, len, itemTagName;
+
+    sc_assert(fmt("itemViewClass must be a subclass of SC.View, not %@", [itemViewClass]), SC.View.detect(itemViewClass));
 
     len = content ? get(content, 'length') : 0;
     if (len) {
@@ -11698,20 +11698,50 @@ SC.CollectionView = SC.ContainerView.extend(
 
         addedViews.push(view);
       }
-
-      childViews.replace(start, 0, addedViews);
     } else {
       var emptyView = get(this, 'emptyView');
-      if (get(childViews, 'length') === 0 && emptyView) {
-        emptyView = this.createChildView(emptyView);
-        set(this, 'emptyView', emptyView);
+      if (!emptyView) { return; }
 
-        childViews.replace(0, get(childViews, 'length'), [emptyView]);
-      }
+      emptyView = this.createChildView(emptyView)
+      addedViews.push(emptyView);
+      set(this, 'emptyView', emptyView);
     }
+
+    childViews.replace(start, 0, addedViews);
+  },
+
+  createChildView: function(view, attrs) {
+    var view = this._super(view, attrs);
+
+    var itemTagName = get(view, 'tagName');
+    var tagName = itemTagName || SC.CollectionView.CONTAINER_MAP[get(this, 'tagName')];
+
+    set(view, 'tagName', tagName);
+
+    return view;
   }
 });
 
+/**
+  @static
+
+  A map of parent tags to their default child tags. You can add
+  additional parent tags if you want collection views that use
+  a particular parent tag to default to a child tag.
+
+  @type Hash
+  @constant
+*/
+SC.CollectionView.CONTAINER_MAP = {
+  ul: 'li',
+  ol: 'li',
+  table: 'tr',
+  thead: 'tr',
+  tbody: 'tr',
+  tfoot: 'tr',
+  tr: 'td',
+  select: 'option'
+};
 
 })({});
 
@@ -12839,27 +12869,6 @@ Handlebars.registerHelper('view', function(path, options) {
 var get = SC.get;
 
 /**
-  @static
-
-  A map of parent tags to their default child tags. You can add
-  additional parent tags if you want collection views that use
-  a particular parent tag to default to a child tag.
-
-  @type Hash
-  @constant
-*/
-SC.Handlebars.CONTAINER_MAP = {
-  ul: 'li',
-  ol: 'li',
-  table: 'tr',
-  thead: 'tr',
-  tbody: 'tr',
-  tfoot: 'tr',
-  tr: 'td',
-  select: 'option'
-};
-
-/**
   @name Handlebars.helpers.collection
   @param {String} path
   @param {Hash} options
@@ -12879,7 +12888,7 @@ Handlebars.registerHelper('collection', function(path, options) {
   // If passed a path string, convert that into an object.
   // Otherwise, just default to the standard class.
   var collectionClass;
-  collectionClass = path ? SC.getPath(path) : SC.CollectionView;
+  collectionClass = path ? SC.getPath(this, path) : SC.CollectionView;
   sc_assert("%@ #collection: Could not find %@".fmt(data.view, path), !!collectionClass);
 
   var hash = options.hash, itemHash = {}, match;
@@ -12908,11 +12917,6 @@ Handlebars.registerHelper('collection', function(path, options) {
   }
 
   var tagName = hash.tagName || get(collectionClass, 'proto').tagName;
-  var childTag = SC.Handlebars.CONTAINER_MAP[tagName];
-
-  if (childTag) {
-    itemHash.tagName = itemHash.tagName || childTag;
-  }
 
   if (fn) {
     itemHash.template = fn;
@@ -12922,7 +12926,7 @@ Handlebars.registerHelper('collection', function(path, options) {
   if (inverse !== Handlebars.VM.noop) {
     hash.emptyView = SC.View.extend({
       template: inverse,
-      tagName: itemHash.tagName || childTag
+      tagName: itemHash.tagName
     });
   }
 
