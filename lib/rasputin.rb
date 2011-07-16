@@ -1,3 +1,3 @@
 require "rasputin/version"
 require "rasputin/engine"
-require "rasputin/handelbars_template"
+require "rasputin/handlebars_template"
