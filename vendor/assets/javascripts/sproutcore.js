@@ -2110,8 +2110,7 @@ SC.set = set;
 // 
 
 function normalizePath(path) {
-  sc_assert('must pass non-empty string to normalizePath()', 
-    path && path!=='');
+  sc_assert('must pass non-empty string to normalizePath()', path && path!=='');
     
   if (path==='*') return path; //special case...
   var first = path.charAt(0);
@@ -2306,7 +2305,7 @@ SC.trySetPath = function(root, path, value) {
   }
 
   return SC.setPath(root, path, value, true);
-}
+};
 
 
 })({});
@@ -4657,8 +4656,7 @@ function _copy(obj, deep, seen, copies) {
   // avoid cyclical loops
   if (deep && (loc=seen.indexOf(obj))>=0) return copies[loc];
   
-  sc_assert('Cannot clone an SC.Object that does not implement SC.Copyable', 
-    !(obj instanceof SC.Object) || (SC.Copyable && SC.Copyable.detect(obj)));
+  sc_assert('Cannot clone an SC.Object that does not implement SC.Copyable', !(obj instanceof SC.Object) || (SC.Copyable && SC.Copyable.detect(obj)));
 
   // IMPORTANT: this specific test will detect a native array only.  Any other
   // object will need to implement Copyable.
@@ -11317,7 +11315,6 @@ SC.View.states = {
     rerender: function(view) {
       var viewMeta = meta(this)['SC.View'], element = get(view, 'element');
 
-      set(view, 'element', null);
       view.state = 'preRender';
 
       var lengthBefore = viewMeta.lengthBeforeRender,
@@ -11332,6 +11329,10 @@ SC.View.states = {
         var childViews = get(view, 'childViews');
         childViews.replace(lengthBefore, lengthAfter - lengthBefore);
       }
+
+      // Set element to null after the childViews.replace() call to prevent
+      // a call to $() from inside _scheduleInsertion triggering a rerender.
+      set(view, 'element', null);
 
       view._insertElementLater(function() {
         SC.$(element).replaceWith(get(this, 'element'));
@@ -12018,10 +12019,6 @@ SC.TextField = SC.View.extend(
 
   _elementValueDidChange: function() {
     set(this, 'value', this.$().val());
-  },
-
-  _valueDidChange: function() {
-    SC.run.once(this, this._updateElementValue);
   },
 
   _updateElementValue: function() {
