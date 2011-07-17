@@ -1,5 +1,5 @@
-(function(){
 
+(function(exports) {
 // ==========================================================================
 // Project:   SproutCore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
@@ -1580,11 +1580,52 @@ SC.log   = function() {
   SC.Logger.log.apply(SC.Logger, arguments);
 };
 
+})({});
 
-})();
 
-(function(){
+(function(exports) {
+//================================================
+// SC.RemoteReporter
+//
+//================================================
 
+var get = SC.get;
+
+SC.RemoteReporter = SC.Object.extend({
+
+  url: null,
+  accessKey: null,
+  method: 'POST',
+
+  log: function() {
+    var message = SC.$.makeArray(arguments);
+    this._send(message);
+  },
+
+  _send: function(message) {
+    message = message || [];
+    var url = get(this, 'url'),
+        method = get(this, 'method'),
+        accessKey = get(this, 'accessKey');
+    if (!url) {
+      throw new Error('SC.RemoteReporter must have an URL to report');
+    }
+    var options = {
+      url: url,
+      type: method,
+      data: {log: message}
+    };
+    if (accessKey) {
+      options.headers = {'X-SproutCore-Logger-Access-Key': accessKey};
+    }
+    SC.$.ajax(options);
+  }
+});
+
+})({});
+
+
+(function(exports) {
 
 SC.DebugSupport = SC.Mixin.create({
   debugOutput: function() {
@@ -1629,6 +1670,16 @@ SC.DebugSupport = SC.Mixin.create({
   }
 });
 
+})({});
 
-})();
 
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore Debug
+// Copyright: ©2011 Paul Chavard
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+
+
+})({});

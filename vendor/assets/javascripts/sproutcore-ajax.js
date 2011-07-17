@@ -1,5 +1,5 @@
-(function(){
 
+(function(exports) {
 // ==========================================================================
 // Project:   SproutCore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
@@ -442,19 +442,16 @@ SC.ok = function(ret) {
   return (ret !== false) && !(ret && ret.isError);
 };
 
+})({});
 
-})();
 
-(function(){
-
+(function(exports) {
 // ==========================================================================
 // Project:   SproutCore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-//require('system/response');
 
 var get = SC.get, set = SC.set;
 
@@ -1060,6 +1057,15 @@ SC.Request.manager = SC.Object.create({
 
 });
 
+})({});
 
-})();
 
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore AJAX
+// Copyright: ©2011 Paul Chavard
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+
+})({});

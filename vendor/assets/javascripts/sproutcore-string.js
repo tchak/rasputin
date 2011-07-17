@@ -1,5 +1,5 @@
-(function(){
 
+(function(exports) {
 var parseNumber = function(source) { return source * 1 || 0; },
     nativeTrim = String.prototype.trim;
 
@@ -150,6 +150,14 @@ if (SC.EXTEND_PROTOTYPES) {
   }
 }
 
+})({});
 
-})();
 
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore String
+// Copyright: ©2011 Paul Chavard
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+})({});
