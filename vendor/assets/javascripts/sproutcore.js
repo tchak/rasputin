@@ -1592,19 +1592,19 @@ if ('undefined' === typeof require) require = SC.K;
 
   Platform specific methods and feature detectors needed by the framework.
 */
-SC.platform = {} ;
+var platform = SC.platform = {} ;
 
 /**
   Identical to Object.create().  Implements if not available natively.
 */
-SC.platform.create = Object.create;
+platform.create = Object.create;
 
 //@if (legacy)
-if (!SC.platform.create) {
+if (!platform.create) {
   var O_ctor = function() {},
       O_proto = O_ctor.prototype;
 
-  SC.platform.create = function(obj, descs) {
+  platform.create = function(obj, descs) {
     O_ctor.prototype = obj;
     obj = new O_ctor();
     O_ctor.prototype = O_proto;
@@ -1612,16 +1612,84 @@ if (!SC.platform.create) {
     if (descs !== undefined) {
       for(var key in descs) {
         if (!descs.hasOwnProperty(key)) continue;
-        SC.platform.defineProperty(obj, key, descs[key]);
+        platform.defineProperty(obj, key, descs[key]);
       }
     }
 
     return obj;
   };
 
-  SC.platform.create.isSimulated = true;
+  platform.create.isSimulated = true;
 }
 //@endif
+
+var defineProperty = Object.defineProperty, canRedefineProperties, canDefinePropertyOnDOM;
+
+// Catch IE8 where Object.defineProperty exists but only works on DOM elements
+if (defineProperty) {
+  try {
+    defineProperty({}, 'a',{get:function(){}});
+  } catch (e) {
+    defineProperty = null;
+  }
+}
+
+if (defineProperty) {
+  // Detects a bug in Android <3.2 where you cannot redefine a property using
+  // Object.defineProperty once accessors have already been set.
+  canRedefineProperties = (function() {
+    var obj = {};
+
+    defineProperty(obj, 'a', {
+      configurable: true,
+      enumerable: true,
+      get: function() { },
+      set: function() { }
+    });
+
+    defineProperty(obj, 'a', {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: true
+    });
+
+    return obj.a === true;
+  })();
+
+  // This is for Safari 5.0, which supports Object.defineProperty, but not
+  // on DOM nodes.
+
+  canDefinePropertyOnDOM = (function(){
+    try {
+      defineProperty(document.body, 'definePropertyOnDOM', {});
+      return true;
+    } catch(e) { }
+
+    return false;
+  })();
+
+  if (!canRedefineProperties) {
+    defineProperty = null;
+  } else if (!canDefinePropertyOnDOM) {
+    defineProperty = function(obj, keyName, desc){
+      var isNode;
+
+      if (typeof Node === "object") {
+        isNode = obj instanceof Node;
+      } else {
+        isNode = typeof obj === "object" && typeof obj.nodeType === "number" && typeof obj.nodeName === "string";
+      }
+
+      if (isNode) {
+        // TODO: Should we have a warning here?
+        return (obj[keyName] = desc.value);
+      } else {
+        return Object.defineProperty(obj, keyName, desc);
+      }
+    };
+  }
+}
 
 /**
   Identical to Object.defineProperty().  Implements as much functionality
@@ -1632,61 +1700,25 @@ if (!SC.platform.create) {
   @param {Object} desc descriptor hash
   @returns {void}
 */
-SC.platform.defineProperty = Object.defineProperty;
-
-// This is for Safari 5.0, which supports Object.defineProperty, but not
-// on DOM nodes.
-
-SC.platform.definePropertyOnDOM = (function(){
-  if (Object.defineProperty) {
-    try {
-      Object.defineProperty(document.body, 'definePropertyOnDOM', {});
-      return true;
-    } catch(e) {};
-  }
-  return false;
-})();
-
-if (SC.platform.defineProperty && !SC.platform.definePropertyOnDOM) {
-  SC.platform.defineProperty = function(obj, keyName, desc){
-    var isNode;
-
-    if (typeof Node === "object") {
-      isNode = obj instanceof Node;
-    } else {
-      isNode = typeof obj === "object" &&
-        typeof obj.nodeType === "number" &&
-        typeof obj.nodeName === "string"
-    }
-
-    if (isNode) {
-      // TODO: Should we have a warning here?
-      return obj[keyName] = desc.value;
-    } else {
-      return Object.defineProperty(obj, keyName, desc);
-    }
-  };
-}
+platform.defineProperty = defineProperty;
 
 /**
   Set to true if the platform supports native getters and setters.
 */
-SC.platform.hasPropertyAccessors = true;
+platform.hasPropertyAccessors = true;
 
 //@if (legacy)
-if (!SC.platform.defineProperty || !Object.prototype.__defineGetter__) {
-  // IE8: check the __defineGetter__
-  SC.platform.hasPropertyAccessors = !!SC.platform.defineProperty && !!Object.prototype.__defineGetter__;
+if (!platform.defineProperty) {
+  platform.hasPropertyAccessors = false;
 
-  SC.platform.defineProperty = function(obj, keyName, desc) {
+  platform.defineProperty = function(obj, keyName, desc) {
     sc_assert("property descriptor cannot have `get` or `set` on this platform", !desc.get && !desc.set);
     obj[keyName] = desc.value;
   };
 
-  SC.platform.defineProperty.isSimulated = true;
+  platform.defineProperty.isSimulated = true;
 }
 //@endif
-
 
 })({});
 
@@ -3935,7 +3967,7 @@ SC.propertyDidChange = function(obj, keyName) {
 
 
 var Mixin, MixinDelegate, REQUIRED, Alias;
-var classToString;
+var classToString, superClassString;
 
 var a_map = Array.prototype.map;
 var EMPTY_META = {}; // dummy for non-writable meta
@@ -4317,11 +4349,33 @@ function processNames(paths, root, seen) {
   paths.length = idx; // cut out last item
 }
 
+superClassString = function(mixin) {
+  var superclass = mixin.superclass;
+  if (superclass) {
+    if (superclass[NAME_KEY]) { return superclass[NAME_KEY] }
+    else { return superClassString(superclass); }
+  } else {
+    return;
+  }
+}
+
 classToString = function() {
   if (!this[NAME_KEY] && !classToString.processed) {
     classToString.processed = true;
     processNames([], window, {});
   }
+
+  if (this[NAME_KEY]) {
+    return this[NAME_KEY];
+  } else {
+    var str = superClassString(this);
+    if (str) {
+      return "(subclass of " + str + ")";
+    } else {
+      return "(unknown mixin)";
+    }
+  }
+
   return this[NAME_KEY] || "(unknown mixin)";
 };
 
@@ -7219,10 +7273,32 @@ CoreObject.PrototypeMixin = SC.Mixin.create({
 
   isDestroyed: false,
 
+  /**
+    Destroys an object by setting the isDestroyed flag and removing its
+    metadata, which effectively destroys observers and bindings.
+
+    If you try to set a property on a destroyed object, an exception will be
+    raised.
+
+    Note that destruction is scheduled for the end of the run loop and does not
+    happen immediately.
+
+    @returns {SC.Object} receiver
+  */
   destroy: function() {
     set(this, 'isDestroyed', true);
-    this[SC.META_KEY] = null;
+    SC.run.schedule('destroy', this, this._scheduledDestroy);
     return this;
+  },
+
+  /**
+    Invoked by the run loop to actually destroy the object. This is
+    scheduled for execution by the `destroy` method.
+
+    @private
+  */
+  _scheduledDestroy: function() {
+    this[SC.META_KEY] = null;
   },
 
   bind: function(to, from) {
@@ -8108,7 +8184,7 @@ SC.run.end = function() {
 
   @property {String}
 */
-SC.run.queues = ['sync', 'actions', 'timers'];
+SC.run.queues = ['sync', 'actions', 'destroy', 'timers'];
 
 /**
   Adds the passed target/method and any optional arguments to the named
@@ -8311,7 +8387,7 @@ SC.run.once = function(target, method) {
     if (!onceTimers[tguid]) onceTimers[tguid] = {};
     onceTimers[tguid][mguid] = guid; // so it isn't scheduled more than once
 
-    run.schedule('timers', timer, invokeOnceTimer, guid, onceTimers);
+    run.schedule('actions', timer, invokeOnceTimer, guid, onceTimers);
   }
 
   return guid;
@@ -9999,9 +10075,59 @@ SC.EventDispatcher = SC.Object.extend(
     @param {String} eventName the name of the method to call on the view
   */
   setupHandler: function(rootElement, event, eventName) {
-    rootElement.delegate('.sc-view', event + '.sproutcore', function(evt) {
+    var self = this;
+
+    rootElement.delegate('.sc-view', event + '.sproutcore', function(evt, triggeringManager) {
+
       var view = SC.View.views[this.id],
-          result = true, handler;
+          result = true, manager = null;
+
+      manager = self._findNearestEventManager(view,eventName);
+
+      if (manager && manager !== triggeringManager) {
+        result = self._dispatchEvent(manager, evt, eventName, view);
+      } else if (view) {
+        result = self._bubbleEvent(view,evt,eventName);
+      } else {
+        evt.stopPropagation();
+      }
+
+      return result;
+    });
+  },
+
+  /** @private */
+  _findNearestEventManager: function(view, eventName) {
+    var manager = null;
+
+    while (view) {
+      manager = get(view, 'eventManager');
+      if (manager && manager[eventName]) { break; }
+
+      view = get(view, 'parentView');
+    }
+
+    return manager;
+  },
+
+  /** @private */
+  _dispatchEvent: function(object, evt, eventName, view) {
+    var result = true;
+
+    handler = object[eventName];
+    if (SC.typeOf(handler) === 'function') {
+      result = handler.call(object, evt, view);
+    }
+
+    evt.stopPropagation();
+
+    return result;
+  },
+
+  /** @private */
+  _bubbleEvent: function(view, evt, eventName) {
+    var result = true, handler,
+        self = this;
 
       SC.run(function() {
         handler = view[eventName];
@@ -10010,8 +10136,7 @@ SC.EventDispatcher = SC.Object.extend(
         }
       });
 
-      return result;
-    });
+    return result;
   },
 
   /** @private */
@@ -10447,6 +10572,7 @@ SC.View = SC.Object.extend(
         elem = this.$();
         var currentValue = elem.attr(attribute);
         attributeValue = get(this, attribute);
+
         type = typeof attributeValue;
 
         if ((type === 'string' || type === 'number') && attributeValue !== currentValue) {
@@ -10524,7 +10650,15 @@ SC.View = SC.Object.extend(
   element: function(key, value) {
     // If the value of element is being set, just return it. SproutCore
     // will cache it for further `get` calls.
-    if (value !== undefined) { return value; }
+    if (value !== undefined) {
+      if (value !== null) {
+        this.invokeRecursively(function(view) {
+          meta(view)['SC.View'].buffer = null;
+          view.state = 'inDOM';
+        });
+      }
+      return value;
+    }
 
     var parent = get(this, 'parentView');
     if (parent) { parent = get(parent, 'element'); }
@@ -10543,20 +10677,7 @@ SC.View = SC.Object.extend(
     @returns {SC.CoreQuery} the CoreQuery object for the DOM node
   */
   $: function(sel) {
-    var elem = get(this, 'element');
-
-    if (!elem) {
-      // if we don't have an element yet, someone calling this.$() is
-      // trying to update an element that isn't in the DOM. Instead,
-      // rerender the view to allow the render method to reflect the
-      // changes.
-      this.rerender();
-      return SC.$();
-    } else if (sel === undefined) {
-      return SC.$(elem);
-    } else {
-      return SC.$(sel, elem);
-    }
+    return this.invokeForState('$', sel);
   },
 
   /** @private */
@@ -10715,11 +10836,6 @@ SC.View = SC.Object.extend(
 
     var buffer = this.renderToBuffer();
     set(this, 'element', buffer.element());
-
-    this.invokeRecursively(function(view) {
-      meta(view)['SC.View'].buffer = null;
-      view.state = 'inDOM';
-    });
 
     return this;
   },
@@ -11221,6 +11337,10 @@ SC.View.states = {
     // appendChild is only legal while rendering the buffer.
     appendChild: function() {
       throw "You can't use appendChild outside of the rendering process";
+    },
+
+    $: function() {
+      return SC.$();
     }
   },
 
@@ -11258,6 +11378,15 @@ SC.View.states = {
 
   // inside the buffer, legal manipulations are done on the buffer
   inBuffer: {
+    $: function(view, sel) {
+      // if we don't have an element yet, someone calling this.$() is
+      // trying to update an element that isn't in the DOM. Instead,
+      // rerender the view to allow the render method to reflect the
+      // changes.
+      view.rerender();
+      return SC.$();
+    },
+
     // when a view is rendered in a buffer, rerendering it simply
     // replaces the existing buffer with a new one
     rerender: function(view) {
@@ -11310,12 +11439,17 @@ SC.View.states = {
   // are done on the DOM element.
   inDOM: {
 
+    $: function(view, sel) {
+      var elem = get(view, 'element');
+      return sel ? SC.$(sel, elem) : SC.$(elem);
+    },
+
     // once the view has been inserted into the DOM, rerendering is
     // deferred to allow bindings to synchronize.
     rerender: function(view) {
       var viewMeta = meta(this)['SC.View'], element = get(view, 'element');
 
-      view.state = 'preRender';
+      view.invokeRecursively(function(v) { v.state = 'preRender'; })
 
       var lengthBefore = viewMeta.lengthBeforeRender,
           lengthAfter  = viewMeta.lengthAfterRender;
@@ -11332,7 +11466,7 @@ SC.View.states = {
 
       // Set element to null after the childViews.replace() call to prevent
       // a call to $() from inside _scheduleInsertion triggering a rerender.
-      set(view, 'element', null);
+      view.invokeRecursively(function(v) { set(v, 'element', null); })
 
       view._insertElementLater(function() {
         SC.$(element).replaceWith(get(this, 'element'));
@@ -11631,7 +11765,10 @@ SC.CollectionView = SC.ContainerView.extend(
   _contentDidChange: function() {
     var content = get(this, 'content');
 
-    if (content) { content.addArrayObserver(this); }
+    if (content) {
+      sc_assert(fmt("an ArrayController's content must implement SC.Array. You passed %@", [content]), content.addArrayObserver);
+      content.addArrayObserver(this);
+    }
     this.arrayDidChange(content, 0, null, get(content, 'length'));
   }.observes('content'),
 
@@ -11768,8 +11905,6 @@ SC.CollectionView.CONTAINER_MAP = {
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-if ('undefined' === typeof jQuery) require('jquery');
-
 SC.$ = jQuery;
 
 
@@ -11807,7 +11942,6 @@ SC.$ = jQuery;
   Note that you won't usually need to use SC.Handlebars yourself. Instead, use
   SC.View, which takes care of integration into the view layer for you.
 */
-
 
 /**
   @namespace
@@ -12137,6 +12271,9 @@ SC.TextArea = SC.View.extend({
   value: "",
   attributeBindings: ['placeholder'],
   placeholder: null,
+
+  insertNewline: SC.K,
+  cancel: SC.K,
   
   focusOut: function(event) {
     this._elementValueDidChange();
@@ -12149,7 +12286,7 @@ SC.TextArea = SC.View.extend({
   },
 
   keyUp: function(event) {
-    this._elementValueDidChange();
+    this.interpretKeyEvents(event);
     return false;
   },
 
@@ -12158,6 +12295,14 @@ SC.TextArea = SC.View.extend({
   */
   willInsertElement: function() {
     this._updateElementValue();
+  },
+
+  interpretKeyEvents: function(event) {
+    var map = SC.TextArea.KEY_EVENTS;
+    var method = map[event.keyCode];
+
+    if (method) { return this[method](event); }
+    else { this._elementValueDidChange(); }
   },
 
   _elementValueDidChange: function() {
@@ -12169,35 +12314,23 @@ SC.TextArea = SC.View.extend({
   }.observes('value')
 });
 
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SproutCore Handlebar Views
-// Copyright: ©2011 Strobe Inc. and contributors.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-
-
-
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SproutCore Handlebar Views
-// Copyright: ©2011 Strobe Inc. and contributors.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-// TODO: should actually compile the template and THEN return that function.
-// This way we won't have to compile templates on the fly.  This version just
-// makes the compile happen when used.
-exports.compileFormat = function(tmpl) {
-  return '\nrequire("sproutcore-handlebars");\nreturn SC.Handlebars.compile('+JSON.stringify(tmpl)+');';
+SC.TextArea.KEY_EVENTS = {
+  13: 'insertNewline',
+  27: 'cancel'
 };
+
+})({});
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore Handlebar Views
+// Copyright: ©2011 Strobe Inc. and contributors.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+
+
 
 })({});
 
@@ -12398,7 +12531,8 @@ var get = SC.get, getPath = SC.getPath, fmt = SC.String.fmt;
         inverseTemplate: inverse,
         property: property,
         previousContext: ctx,
-        isEscaped: options.hash.escaped
+        isEscaped: options.hash.escaped,
+	tagName: options.hash.tagName || 'span'
       });
 
       var observer, invoker;
@@ -12920,7 +13054,7 @@ Handlebars.registerHelper('collection', function(path, options) {
     delete options.fn;
   }
 
-  if (inverse !== Handlebars.VM.noop) {
+  if (inverse && inverse !== Handlebars.VM.noop) {
     hash.emptyView = SC.View.extend({
       template: inverse,
       tagName: itemHash.tagName
@@ -12967,16 +13101,16 @@ Handlebars.registerHelper('each', function(path, options) {
 var get = SC.get, getPath = SC.getPath;
 
 /**
-  `raw` allows you to output a property without binding. *Important:* The 
+  `unbound` allows you to output a property without binding. *Important:* The 
   output will not be updated if the property changes. Use with caution.
 
-      <div>{{raw somePropertyThatDoesntChange}}</div>
+      <div>{{unbound somePropertyThatDoesntChange}}</div>
 
-  @name Handlebars.helpers.raw
+  @name Handlebars.helpers.unbound
   @param {String} property
   @returns {String} HTML string
 */
-Handlebars.registerHelper('raw', function(property) {
+Handlebars.registerHelper('unbound', function(property) {
   return getPath(this, property);
 });
 
@@ -13075,7 +13209,6 @@ SC.$(document).ready(function() {
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
 
 
 
