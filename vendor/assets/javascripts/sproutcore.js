@@ -1599,7 +1599,6 @@ var platform = SC.platform = {} ;
 */
 platform.create = Object.create;
 
-//@if (legacy)
 if (!platform.create) {
   var O_ctor = function() {},
       O_proto = O_ctor.prototype;
@@ -1621,7 +1620,6 @@ if (!platform.create) {
 
   platform.create.isSimulated = true;
 }
-//@endif
 
 var defineProperty = Object.defineProperty, canRedefineProperties, canDefinePropertyOnDOM;
 
@@ -1707,7 +1705,6 @@ platform.defineProperty = defineProperty;
 */
 platform.hasPropertyAccessors = true;
 
-//@if (legacy)
 if (!platform.defineProperty) {
   platform.hasPropertyAccessors = false;
 
@@ -1718,7 +1715,6 @@ if (!platform.defineProperty) {
 
   platform.defineProperty.isSimulated = true;
 }
-//@endif
 
 })({});
 
@@ -2448,7 +2444,13 @@ var SIMPLE_DESC = {
   
   You generally won't need to create or subclass this directly.
 */
-SC.Descriptor = function() {};
+var Dc = SC.Descriptor = function() {};
+
+var setup = Dc.setup = function(obj, keyName, value) {
+  SIMPLE_DESC.value = value;
+  o_defineProperty(obj, keyName, SIMPLE_DESC);
+  SIMPLE_DESC.value = null;
+};
 
 var Dp = SC.Descriptor.prototype;
 
@@ -2508,11 +2510,7 @@ Dp.get = function(obj, keyName) {
   
   @returns {void}
 */
-Dp.setup = function(obj, keyName, value) {
-  SIMPLE_DESC.value = value;
-  o_defineProperty(obj, keyName, SIMPLE_DESC);
-  SIMPLE_DESC.value = null;
-};
+Dp.setup = setup;
 
 /**
   This is called on the descriptor just before another descriptor takes its
@@ -2547,7 +2545,6 @@ Dp.val = function(obj, keyName) {
 // testing on browsers that do support accessors.  It will throw an exception
 // if you do foo.bar instead of SC.get(foo, 'bar')
 
-//@if (legacy)
 if (!USE_ACCESSORS) {
   SC.Descriptor.MUST_USE_GETTER = function() {
     sc_assert('Must use SC.get() to access this property', false);
@@ -2561,7 +2558,6 @@ if (!USE_ACCESSORS) {
     }
   };
 }
-//@endif
 
 var WATCHED_DESC = {
   configurable: true,
@@ -2570,8 +2566,13 @@ var WATCHED_DESC = {
 };
 
 function w_get(obj, keyName) {
-  var m = meta(obj, false);
-  return m.values ? m.values[keyName] : undefined;
+  var m = meta(obj, false), values = m.values;
+
+  if (values) {
+    if (keyName in values) { return values[keyName]; }
+    if (obj.unknownProperty) { return obj.unknownProperty(keyName); }
+  }
+
 }
 
 function w_set(obj, keyName, value) {
@@ -3529,7 +3530,7 @@ function addChainWatcher(obj, keyName, node) {
   if (!nodes || nodes.__scproto__ !== obj) {
     nodes = m.chainWatchers = { __scproto__: obj };
   }
-  
+
   if (!nodes[keyName]) nodes[keyName] = {};
   nodes[keyName][guidFor(node)] = node;
   SC.watch(obj, keyName);
@@ -3610,10 +3611,10 @@ Wp.copy = function(obj) {
 // path.
 Wp.add = function(path) {
   var obj, tuple, key, src, separator, paths;
-  
+
   paths = this._paths;
   paths[path] = (paths[path] || 0) + 1 ;
-  
+
   obj = this._value;
   tuple = normalizeTuple(obj, path);
   if (tuple[0] && (tuple[0] === obj)) {
@@ -3626,14 +3627,14 @@ Wp.add = function(path) {
   } else if (!tuple[0]) {
     pendingQueue.push([this, path]);
     return;
-    
+
   } else {
     src  = tuple[0];
     key  = path.slice(0, 0-(tuple[1].length+1));
     separator = path.slice(key.length, key.length+1);
     path = tuple[1];
   }
-  
+
   this.chain(key, path, src, separator);
 };
 
@@ -3651,13 +3652,13 @@ Wp.remove = function(path) {
     path = tuple[1];
     key  = firstKey(path);
     path = path.slice(key.length+1);
-    
+
   } else {
     src  = tuple[0];
     key  = path.slice(0, 0-(tuple[1].length+1));
     path = tuple[1];
   }
-  
+
   this.unchain(key, path);
 };
 
@@ -3712,7 +3713,7 @@ Wp.willChange = function() {
 
 Wp.chainWillChange = function(chain, path, depth) {
   if (this._key) path = this._key+this._separator+path;
-  
+
   if (this._parent) {
     this._parent.chainWillChange(this, path, depth+1);
   } else {
@@ -4496,13 +4497,11 @@ YES = true;
 */
 NO = false;
 
-//@if (legacy)
 // ensure no undefined errors in browsers where console doesn't exist
 if (typeof console === 'undefined') {
   window.console = {};
   console.log = console.info = console.warn = console.error = function() {};
 }
-//@endif
 
 // ..........................................................
 // BOOTSTRAP
@@ -4820,7 +4819,6 @@ SC.ORDER_DEFINITION = SC.ENV.ORDER_DEFINITION || [
 */
 SC.keys = Object.keys;
 
-//@if (legacy)
 if (!SC.keys) {
   SC.keys = function(obj) {
     var ret = [];
@@ -7757,9 +7755,7 @@ SC.Set = SC.CoreObject.extend(SC.MutableEnumerable, SC.Copyable, SC.Freezable,
 var o_create = SC.Set.create;
 SC.Set.create = function(items) {
   if (items && SC.Enumerable.detect(items)) {
-//@if (debug)
     SC.Logger.warn('Passing an enumerable to SC.Set.create() is deprecated and will be removed in a future version of SproutCore.  Use new SC.Set(items) instead');
-//@endif
     return new SC.Set(items);
   } else {
     return o_create.apply(this, arguments);
@@ -8062,10 +8058,8 @@ var RunLoop = SC.Object.extend({
       while (this._queues && (queue = this._queues[queueName])) {
         this._queues[queueName] = null;
 
-        //@if (debug)
         log = SC.LOG_BINDINGS && queueName==='sync';
         if (log) SC.Logger.log('Begin: Flush Sync Queue');
-        //@endif
 
         // the sync phase is to allow property changes to propogate.  don't
         // invoke observers until that is finished.
@@ -8073,9 +8067,7 @@ var RunLoop = SC.Object.extend({
         queue.forEach(iter);
         if (queueName === 'sync') SC.endPropertyChanges();
 
-        //@if (debug)
         if (log) SC.Logger.log('End: Flush Sync Queue');
-        //@endif
 
       }
 
@@ -8088,18 +8080,14 @@ var RunLoop = SC.Object.extend({
           queueName = queueNames[idx];
           queue = queues[queueName];
 
-          //@if (debug)
           log = SC.LOG_BINDINGS && queueName==='sync';
           if (log) SC.Logger.log('Begin: Flush Sync Queue');
-          //@endif
 
           if (queueName === 'sync') SC.beginPropertyChanges();
           if (queue) queue.forEach(iter);
           if (queueName === 'sync') SC.endPropertyChanges();
 
-          //@if (debug)
           if (log) SC.Logger.log('End: Flush Sync Queue');
-          //@endif
 
         }
 
@@ -8148,7 +8136,7 @@ SC.run = run = function(target, method) {
 
   var ret, loop;
   run.begin();
-  if (target || method) ret = invoke(target, method);
+  if (target || method) ret = invoke(target, method, arguments, 2);
   run.end();
   return ret;
 };
@@ -8491,7 +8479,6 @@ SC.RunLoop.end = SC.run.end;
 // CONSTANTS
 // 
 
-//@if (debug)
 
 /**
   @static
@@ -8525,7 +8512,6 @@ SC.BENCHMARK_BINDING_NOTIFICATIONS = !!SC.ENV.BENCHMARK_BINDING_NOTIFICATIONS;
 */
 SC.BENCHMARK_BINDING_SETUP = !!SC.ENV.BENCHMARK_BINDING_SETUP;
 
-//@endif
 
 /**
   @static
@@ -9059,9 +9045,7 @@ var Binding = SC.Object.extend({
   /** @private */
   _sync: function(obj) {
 
-    //@if (debug)
     var log = SC.LOG_BINDINGS;
-    //@endif
 
     if (obj.isDestroyed) { return; }
     
@@ -9073,9 +9057,7 @@ var Binding = SC.Object.extend({
       val = fromValue(obj, this);
       tv  = transformedValue(this, val, obj);
 
-      //@if (debug)
       if (log) { SC.Logger.log(' ', this.toString(), val, '->', tv, obj); }
-      //@endif
       
       // apply changes
       SC.trySetPath(obj, this._to, tv);
@@ -9086,9 +9068,7 @@ var Binding = SC.Object.extend({
       tv  = transformedValue(this, fromValue(obj, this), obj);
       if (val !== tv) {
 
-        //@if (debug)
         if (log) { SC.Logger.log(' ', this.toString(), val, '<-', tv, obj); }
-        //@endif
 
         SC.trySetPath(obj, this._from, val);
       }
@@ -9342,10 +9322,10 @@ SC.EachProxy = SC.Object.extend({
     You can directly access mapped properties by simply requesting them.
     The unknownProperty handler will generate an EachArray of each item.
   */
-  unknownProperty: function(keyName) {
+  unknownProperty: function(keyName, value) {
     var ret;
     ret = new EachArray(this._content, keyName, this);
-    set(this, keyName, ret);
+    new SC.Descriptor().setup(this, keyName, ret);
     this.beginObservingContentKey(keyName);
     return ret;
   },
@@ -10117,9 +10097,11 @@ SC.EventDispatcher = SC.Object.extend(
     handler = object[eventName];
     if (SC.typeOf(handler) === 'function') {
       result = handler.call(object, evt, view);
+      evt.stopPropagation();
     }
-
-    evt.stopPropagation();
+    else {
+      result = this._bubbleEvent(view, evt, eventName);
+    }
 
     return result;
   },
@@ -11766,7 +11748,7 @@ SC.CollectionView = SC.ContainerView.extend(
     var content = get(this, 'content');
 
     if (content) {
-      sc_assert(fmt("an ArrayController's content must implement SC.Array. You passed %@", [content]), content.addArrayObserver);
+      sc_assert(fmt("an ArrayController's content must implement SC.Array. You passed %@", [content]), content.addArrayObserver != null);
       content.addArrayObserver(this);
     }
     this.arrayDidChange(content, 0, null, get(content, 'length'));
@@ -12045,10 +12027,13 @@ SC.Handlebars.compile = function(string) {
   @param {Hash} options
 */
 Handlebars.registerHelper('helperMissing', function(path, options) {
-  var error;
+  var error, view = "";
 
   error = "%@ Handlebars error: Could not find property '%@' on object %@.";
-  throw new SC.Error(SC.String.fmt(error, options.data.view, path, this));
+  if (options.data){
+    view = options.data.view;
+  }
+  throw new SC.Error(SC.String.fmt(error, [view, path, this]));
 });
 
 
@@ -12078,15 +12063,9 @@ SC.Checkbox = SC.View.extend({
 
   defaultTemplate: SC.Handlebars.compile('<label><input type="checkbox" {{bindAttr checked="value"}}>{{title}}</label>'),
 
-  click: function() {
-    if (jQuery.browser.msie) {
-      this.change();
-    }
-  },
-
   change: function() {
     SC.run.once(this, this._updateElementValue);
-    return false;
+    // returning false will cause IE to not change checkbox state
   },
 
   _updateElementValue: function() {
@@ -12271,9 +12250,6 @@ SC.TextArea = SC.View.extend({
   value: "",
   attributeBindings: ['placeholder'],
   placeholder: null,
-
-  insertNewline: SC.K,
-  cancel: SC.K,
   
   focusOut: function(event) {
     this._elementValueDidChange();
@@ -12286,7 +12262,7 @@ SC.TextArea = SC.View.extend({
   },
 
   keyUp: function(event) {
-    this.interpretKeyEvents(event);
+    this._elementValueDidChange();
     return false;
   },
 
@@ -12297,14 +12273,6 @@ SC.TextArea = SC.View.extend({
     this._updateElementValue();
   },
 
-  interpretKeyEvents: function(event) {
-    var map = SC.TextArea.KEY_EVENTS;
-    var method = map[event.keyCode];
-
-    if (method) { return this[method](event); }
-    else { this._elementValueDidChange(); }
-  },
-
   _elementValueDidChange: function() {
     set(this, 'value', this.$().val());
   },
@@ -12313,11 +12281,6 @@ SC.TextArea = SC.View.extend({
     this.$().val(get(this, 'value'));
   }.observes('value')
 });
-
-SC.TextArea.KEY_EVENTS = {
-  13: 'insertNewline',
-  27: 'cancel'
-};
 
 })({});
 
@@ -13010,6 +12973,9 @@ Handlebars.registerHelper('collection', function(path, options) {
   if (path && path.data && path.data.isRenderData) {
     options = path;
     path = undefined;
+    sc_assert("You cannot pass more than one argument to the collection helper", arguments.length === 1);
+  } else {
+    sc_assert("You cannot pass more than one argument to the collection helper", arguments.length === 2);
   }
 
   var fn = options.fn;
@@ -13098,7 +13064,7 @@ Handlebars.registerHelper('each', function(path, options) {
 // ==========================================================================
 /*globals Handlebars */
 
-var get = SC.get, getPath = SC.getPath;
+var getPath = SC.getPath;
 
 /**
   `unbound` allows you to output a property without binding. *Important:* The 
@@ -13123,6 +13089,46 @@ Handlebars.registerHelper('unbound', function(property) {
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
+/*globals Handlebars */
+
+var getPath = SC.getPath;
+
+/**
+  `log` allows you to output the value of a value in the current rendering
+  context.
+
+    {{log myVariable}}
+
+  @name Handlebars.helpers.log
+  @param {String} property
+*/
+Handlebars.registerHelper('log', function(property) {
+  console.log(getPath(this, property));
+});
+
+/**
+  The `debugger` helper executes the `debugger` statement in the current
+  context.
+
+    {{debugger}}
+
+  @name Handlebars.helpers.debugger
+  @param {String} property
+*/
+Handlebars.registerHelper('debugger', function() {
+  debugger;
+});
+
+})({});
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore Handlebar Views
+// Copyright: ©2011 Strobe Inc. and contributors.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
 
 
 
