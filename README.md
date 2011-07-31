@@ -8,13 +8,10 @@ It provide direct requires for official sproutcore packages :
 * sproutcore
 * sproutcore-datastore
 * sproutcore-statechart
-* sproutcore-ui
 
 And it also provides some unnoficial packages :
 
 * sproutcore-ajax (backport form sc 1.x API but using jQuery $.ajax)
-* sproutcore-debug (backport form sc 1.x Logger)
-* sproutcore-string (useful String methods, borrowed from underscore string)
 * sproutcore-ui (jQuery UI wrappers for sc 2.0)
 * sproutcore-throbber (jQuery UI throbber and it wrapper for JUI)
 
