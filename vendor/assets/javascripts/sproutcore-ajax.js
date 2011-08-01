@@ -275,7 +275,7 @@ SC.Response = SC.Object.extend(
   */
   toString: function() {
     var ret = this._super();
-    return "%@<%@ %@, status=%@".fmt(ret, this.get('type'), this.get('address'), this.get('status'));
+    return "%@<%@ %@, status=%@".fmt(ret, this.get('type'), this.get('url'), this.get('status'));
   },
 
   /**
@@ -329,7 +329,7 @@ SC.XHRResponse = SC.Response.extend({
           key, value;
       if (idx>=0) {
         key = header.slice(0,idx);
-        value = SC.String.trim(header.slice(idx+1));
+        value = header.slice(idx+1).trim();
         ret[key] = value ;
       }
     }, this);
