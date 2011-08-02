@@ -1,4 +1,5 @@
 require 'tilt'
+require 'sprockets/engines'
 
 module Rasputin
   class HandlebarsTemplate < Tilt::Template
@@ -28,5 +29,4 @@ SC.TEMPLATES[#{template_path(scope.logical_path).inspect}] = SC.Handlebars.compi
   end
 end
 
-Sprockets::Engines #invoke autoloading
 Sprockets.register_engine '.handlebars', Rasputin::HandlebarsTemplate
