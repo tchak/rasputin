@@ -11,9 +11,9 @@ It provide direct requires for official sproutcore packages :
 
 And it also provides some unnoficial packages :
 
-* sproutcore-ajax (backport form sc 1.x API but using jQuery $.ajax)
 * sproutcore-jui (jQuery UI wrappers for sc 2.0)
-* sproutcore-throbber (jQuery UI throbber and it's wrapper for JUI)
+* sproutcore-ajax (backport form sc 1.x API but using jQuery $.ajax)
+* sproutcore-i18n (integration with i18n-js gem)
 
 Rasputin also provide sprockets engine for handlebars templates. Any template in your
 javascript assets folder with extention handlebars will be availabel in sproutcore.
