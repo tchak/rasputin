@@ -399,6 +399,7 @@ SC.XHRResponse = SC.Response.extend({
     @returns {Boolean} request success
   */
   finishRequest: function(rawRequest) {
+    this.set('rawRequest', rawRequest);
     if (rawRequest.readyState === 4 && !get(this, 'timedOut')) {
       this.receive(function(proceed) {
         if (!proceed) return; // skip receiving...
