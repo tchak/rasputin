@@ -1,7 +1,5 @@
 
-(function(exports) {
-
-if ('I18n' in window) {
+(function() {
 
 SC.I18n = I18n;
 
@@ -16,25 +14,9 @@ Handlebars.registerHelper('loc', function(property) {
 });
 
 if (SC.EXTEND_PROTOTYPES) {
-
-String.prototype.loc = function(options) {
-  return SC.String.loc(this, options);
-};
-
+  String.prototype.loc = function(options) {
+    return SC.String.loc(String(this), options);
+  };
 }
 
-}
-
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SproutCore I18N
-// Copyright: ©2011 Paul Chavard
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-if ('undefined' === typeof I18n) require('i18n');
-
-})({});
+})();

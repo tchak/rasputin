@@ -22,3 +22,9 @@ Examples :
 
     todos/templates/item.handlebars >> SC.TEMPLATES['todos_item']
     todos/ui/templates/stats.handlebars >> SC.TEMPLATES['todos_ui_stats']
+
+Changelog :
+
+  0.6.0 :
+    - update to lates sproutcore 2 (beta3)
+    - lots of fixes for sproutcore-jui

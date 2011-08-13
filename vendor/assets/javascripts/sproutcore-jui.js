@@ -1,5 +1,21 @@
 
 (function(exports) {
+/*
+ * jQuery UI Autocomplete SC Extension
+ */
+
+$.widget('ui.sc_autocomplete', $.ui.autocomplete, {
+  _renderItem: function(ul, item) {
+    var view = this.options.itemViewClass.create({content:item, widget: this});
+    view.appendTo(ul);
+    return view.$();
+  }
+});
+
+})({});
+
+
+(function(exports) {
 if ('undefined' === typeof JUI) {
 
 /**
@@ -22,7 +38,7 @@ if ('undefined' !== typeof window) {
   @default '1.0.alpha'
   @constant
 */
-JUI.VERSION = '1.0.alpha';
+JUI.VERSION = '1.0.beta.1.pre';
 
 })({});
 
@@ -49,8 +65,6 @@ JUI.Widget = SC.Mixin.create({
 
     var ui = get(this, 'uiWidget')(options, get(this, 'element'));
     set(this, 'ui', ui);
-
-    this._defineMethods();
   },
 
   willDestroyElement: function() {
@@ -110,23 +124,11 @@ JUI.Widget = SC.Mixin.create({
       };
 
       this.addObserver(key, observer);
-      this._observers = this._observers || {};
-      this._observers[key] = observer;
+      //this._observers = this._observers || {};
+      //this._observers[key] = observer;
     }, this);
 
     return options;
-  },
-
-  _defineMethods: function() {
-    var uiMethods = get(this, 'uiMethods'),
-        methods = {};
-    uiMethods.forEach(function(methodName) {
-      methods[methodName] = function() {
-        var ui = get(this, 'ui');
-        return ui[methodName].apply(ui, arguments);
-      };
-    });
-    this.reopen(methods);
   }
 });
 
@@ -135,6 +137,119 @@ JUI.Widget = SC.Mixin.create({
 
 (function(exports) {
 
+var get = SC.get;
+
+/**
+  @mixin
+  @since SproutCore JUI 1.0
+  @extends JUI.TargetSupport
+*/
+JUI.TargetSupport = SC.Mixin.create({
+
+  // @private
+  targetObject: function() {
+    var target = get(this, 'target');
+
+    if (SC.typeOf(target) === 'string') {
+      return SC.getPath(this, target);
+    } else {
+      return target;
+    }
+  }.property('target').cacheable(),
+
+  // @private
+  executeAction: function() {
+    var args = SC.$.makeArray(arguments),
+        action = args.shift(),
+        target = get(this, 'targetObject');
+    if (target && action) {
+      if (SC.typeOf(action) === 'string') {
+        action = target[action];
+      }
+      action.apply(target, args);
+    }
+  }
+
+});
+
+})({});
+
+
+(function(exports) {
+
+
+
+var get = SC.get;
+
+/**
+  @class
+  @since SproutCore JUI 1.0
+  @extends JUI.AutocompleteItem
+*/
+JUI.AutocompleteItem = SC.View.extend({
+  tagName: 'li',
+  defaultTemplate: SC.Handlebars.compile('<a>{{content.label}}</a>'),
+  didInsertElement: function() {
+    this._super();
+    this.$().data('item.autocomplete', {
+      value: this.getPath('content.value'),
+      label: this.getPath('content.label')
+    });
+    this.get('widget').menu.refresh();
+  }
+});
+
+/**
+  @class
+  @since SproutCore JUI 1.0
+  @extends JUI.AutocompleteTextField
+*/
+JUI.AutocompleteTextField = SC.TextField.extend(JUI.Widget, JUI.TargetSupport, {
+  uiType: 'sc_autocomplete',
+  uiOptions: ['_source', 'delay', 'autoFocus', 'position', 'minLength', 'itemViewClass'],
+  uiEvents: ['select', 'focus', 'open', 'close'],
+
+  itemViewClass: JUI.AutocompleteItem,
+  requestContent: SC.K,
+  content: [],
+
+  _source: function() {
+    var source = this.get('source');
+    if (source) {
+      this.set('content', source);
+      return source;
+    } else {
+      return $.proxy(this, '_requestContent');
+    }
+  }.property('source').cacheable(),
+
+  _requestContent: function (data, callback) {
+    this._lastCallback = callback;
+    this.requestContent(data);
+  },
+
+  _contentDidChange: function() {
+    if (this._lastCallback) {
+      this._lastCallback(this.get('content'));
+      this._lastCallback = null;
+    }
+  }.observes('content'),
+
+  select: function(event, ui) {
+    if (ui.item) {
+      this.executeAction(get(this, 'action'), ui.item.value);
+      event.preventDefault();
+    }
+  }
+});
+
+})({});
+
+
+(function(exports) {
+
+var get = SC.get;
+
 /**
   @class
   @since SproutCore JUI 1.0
@@ -142,9 +257,18 @@ JUI.Widget = SC.Mixin.create({
 */
 JUI.Button = SC.Button.extend(JUI.Widget, {
   uiType: 'button',
-  uiOptions: ['label'],
+  uiOptions: ['label', '_icons'],
 
-  isActiveBinding: SC.Binding.oneWay('.disabled')
+  isActiveBinding: SC.Binding.oneWay('.disabled'),
+
+  _icons: function() {
+    var icons = {};
+    icons.primary = get(this, 'icon');
+    if (icons.primary) {
+      icons.primary = 'ui-icon-'.fmt(icons.primary);
+    }
+    return icons;
+  }.property('icon').cacheable()
 });
 
 })({});
@@ -271,49 +395,17 @@ jQuery(window).resize(function() {
 
 (function(exports) {
 
-var get = SC.get;
-
-/**
-  @mixin
-  @since SproutCore JUI 1.0
-  @extends JUI.TargetSupport
-*/
-JUI.TargetSupport = SC.Mixin.create({
-
-  // @private
-  targetObject: function() {
-    var target = get(this, 'target');
-
-    if (SC.typeOf(target) === 'string') {
-      return SC.getPath(this, target);
-    } else {
-      return target;
-    }
-  }.property('target').cacheable(),
-
-  // @private
-  executeAction: function() {
-    var args = SC.$.makeArray(arguments),
-        action = args.shift(),
-        target = get(this, 'targetObject');
-    if (target && action) {
-      if (SC.typeOf(action) === 'string') {
-        action = target[action];
-      }
-      action.apply(target, args);
-    }
-  }
-
-});
-
-})({});
-
-
-(function(exports) {
-
 
 
 var get = SC.get, set = SC.set;
+
+JUI.DialogButton = SC.Object.extend(JUI.TargetSupport, {
+  label: 'OK',
+  action: 'close',
+  executeAction: function() {
+    this._super(get(this, 'action'));
+  }
+});
 
 /**
   @class
@@ -326,55 +418,49 @@ JUI.Dialog = SC.View.extend(JUI.Widget, JUI.TargetSupport, {
   uiOptions: ['title', '_buttons', 'position', 'closeOnEscape',
     'modal', 'draggable', 'resizable', 'autoReposition',
     'width', 'height', 'maxWidth', 'maxHeight', 'minWidth', 'minHeight'],
-  uiMethods: ['open', 'close'],
 
   isOpen: false,
-
   message: '',
-  icon: null,
   buttons: [],
 
-  _iconClassNames: function() {
-    var icon = get(this, 'icon');
-    if (icon) {
-      return "ui-icon ui-icon-%@".fmt(icon === 'error' ? 'alert' : icon);
-    }
-    return '';
-  }.property('icon').cacheable(),
+  defaultTemplate: SC.Handlebars.compile('<p>{{message}}</p>'),
 
-  _stateClassNames: function() {
-    var icon = get(this, 'icon');
-    if (icon === 'error') {
-      return 'ui-state-error';
-    } else if (icon === 'info') {
-      return 'ui-state-highlight';
+  open: function() {
+    if (get(this, 'state') !== 'inDOM') {
+      this._insertElementLater(SC.K);
+    } else {
+      get(this, 'ui').open();
     }
-    return '';
-  }.property('icon').cacheable(),
+  },
 
-  defaultTemplate: SC.Handlebars.compile('<p {{bindAttr class="_stateClassNames"}}>\
-    <span {{bindAttr class="_iconClassNames"}}></span>{{message}}</p>'),
+  close: function() {
+    get(this, 'ui').close();
+  },
+
+  didInsertElement: function() {
+    this._super();
+    get(this, 'ui')._bind({
+      dialogopen: $.proxy(this._open, this),
+      dialogclose: $.proxy(this._close, this)
+    });
+  },
 
   _buttons: function() {
-    var buttons = [],
-        target = get(this, 'targetObject');
-    get(this, 'buttons').forEach(function(button) {
-      var action = button.action,
-          context = this;
-      if (!this[action] && target) {
-        context = target;
-      }
-      buttons.push({
-        text: button.label,
-        click: function(event) {
-          if (context && context[action]) {
-            context[action].call(context, event);
-          }
-        }
-      });
-    }, this);
-    return buttons;
+    return get(this, 'buttons').map(this._buildButton, this);
   }.property('buttons').cacheable(),
+
+  _buildButton: function(buttonPath) {
+    var button = this.getPath(buttonPath);
+    if (!button.isInstance) {
+      button = button.create({
+        target: get(this, 'targetObject') || this
+      });
+      set(this, buttonPath, button);
+    }
+    var props = {text: get(button, 'label')};
+    props.click = $.proxy(button, 'executeAction')
+    return props;
+  },
 
   _open: function() {
     set(this, 'isOpen', true);
@@ -386,20 +472,6 @@ JUI.Dialog = SC.View.extend(JUI.Widget, JUI.TargetSupport, {
     this.didCloseDialog();
   },
 
-  open: function() {
-    this._insertElementLater(SC.K);
-    this._open();
-  },
-
-  didInsertElement: function() {
-    this._super();
-    get(this, 'ui')._bind({
-      dialogopen: $.proxy(this._open, this),
-      dialogclose: $.proxy(this._close, this)
-    });
-  },
-
-  close: SC.K,
   didOpenDialog: SC.K,
   didCloseDialog: SC.K
 });
@@ -408,40 +480,36 @@ JUI.Dialog.close = function() {
   $('.ui-dialog-content:visible').dialog('close');
 };
 
-var alertDialog, confirmDialog;
-
-JUI.AlertDialog = JUI.Dialog.extend({
-  buttons: [{label: 'OK', action: 'close'}],
+JUI.ModalDialog = JUI.Dialog.extend({
+  buttons: ['ok'],
+  ok: JUI.DialogButton,
   resizable: false,
   draggable: false,
   modal: true
 });
 
-JUI.AlertDialog.reopenClass({
+JUI.AlertDialog = JUI.ModalDialog.create({
   open: function(message, title, type) {
-    if (!alertDialog) {
-      alertDialog = JUI.AlertDialog.create();
-    }
-    set(alertDialog, 'title', title ? title : null);
-    set(alertDialog, 'message', message);
-    set(alertDialog, 'icon', type);
-    alertDialog.open();
+    set(this, 'title', title);
+    set(this, 'message', message);
+    set(this, 'icon', type);
+    this._super();
   },
-
   info: function(message, title) {
-    JUI.AlertDialog.open(message, title, 'info');
+    this.open(message, title, 'info');
   },
-
   error: function(message, title) {
-    JUI.AlertDialog.open(message, title, 'error');
+    this.open(message, title, 'error');
   }
 });
 
-JUI.ConfirmDialog = JUI.AlertDialog.extend({
-  buttons: [
-    {label: 'YES', action: 'didConfirm'},
-    {label: 'NO', action: 'close'}
-  ],
+JUI.ConfirmDialog = JUI.ModalDialog.create({
+  buttons: ['yes', 'no'],
+  yes: JUI.DialogButton.extend({
+    label: 'YES',
+    action: 'didConfirm'
+  }),
+  no: JUI.DialogButton.extend({label: 'NO'}),
   didConfirm: function() {
     get(this, 'answer').resolve();
     this.close();
@@ -452,19 +520,13 @@ JUI.ConfirmDialog = JUI.AlertDialog.extend({
       answer.reject();
     }
     set(this, 'answer', null);
-  }
-});
-
-JUI.ConfirmDialog.reopenClass({
+  },
   open: function(message, title) {
-    if (!confirmDialog) {
-      confirmDialog = JUI.ConfirmDialog.create();
-    }
     var answer = SC.$.Deferred();
-    set(confirmDialog, 'answer', answer);
-    set(confirmDialog, 'title', title ? title : null);
-    set(confirmDialog, 'message', message);
-    confirmDialog.open();
+    set(this, 'answer', answer);
+    set(this, 'title', title);
+    set(this, 'message', message);
+    this._super();
     return answer.promise();
   }
 });
@@ -636,57 +698,247 @@ JUI.ResizableView = SC.View.extend(JUI.Widget, {
 
 
 (function(exports) {
-
-
-
-
-
-
-
-
-
-
-})({});
-
-
-(function(exports) {
-/*
- * jQuery UI Autocomplete HTML Extension
+/*!
+ * jQuery UI Throbber
  *
- * Copyright 2010, Scott González (http://scottgonzalez.com)
- * Dual licensed under the MIT or GPL Version 2 licenses.
+ * Copyright (c) 2011 Paul Chavard
+ * Licensed under the MIT license
  *
- * http://github.com/scottgonzalez/jquery-ui-extensions
+ * Author: Paul Chavard [paul at chavard dot net]
+ * Version: 0.5.0
+ *
+ * Credits: Felix Gnass [fgnass at neteye dot de]
+ *
  */
 
-var proto = jQuery.ui.autocomplete.prototype,
-  initSource = proto._initSource,
-  escapeRegex = jQuery.ui.autocomplete.escapeRegex;
+(function($, undefined) {
 
-function filter(array, term) {
-  var matcher = new RegExp(escapeRegex(term), 'i');
-  return jQuery.grep(array, function(value) {
-    return matcher.test(jQuery('<div>').html(value.label || value.value || value).text());
-  });
-}
+$.widget('ui.throbber', {
+  options: {
+    segments: 12,
+    space: 3,
+    length: 7,
+    width: 4,
+    speed: 1.2,
+    align: 'center',
+    valign: 'center',
+    padding: 4,
+    autoStart: false,
+    outside: true
+  },
 
-jQuery.extend(proto, {
-  _initSource: function() {
-    if (this.options.html && jQuery.isArray(this.options.source)) {
-      this.source = function(request, response) {
-        response(filter( this.options.source, request.term));
-      };
-    } else {
-      initSource.call(this);
+  _create: function() {
+    this.options = $.extend({color: this.element.css('color')}, this.options);
+    this._prepare();
+    if (this.options.autoStart) {
+      this._activate();
     }
   },
 
-  _renderItem: function(ul, item) {
-    return jQuery('<li></li>')
-      .data('item.autocomplete', item)
-      .append(jQuery('<a></a>')[this.options.html ? 'html' : 'text'](item.label))
-      .appendTo(ul);
+  _setOption: function(key, value) {
+    this.options[key] = value;
+
+    if (key === 'disabled') {
+      if (this.throbber) {
+        clearInterval(this.interval);
+        this.throbber.remove();
+      }
+      if (value === false) {
+        this._activate();
+      }
+    }
+
+    return this;
+  },
+
+  _activate: function() {
+    var options = this.options;
+    this.throbber = this._render().css('position', 'absolute').prependTo(options.outside ? 'body' : this.element);
+    var h = this.element.outerHeight() - this.throbber.height();
+    var w = this.element.outerWidth() - this.throbber.width();
+    var margin = {
+      top: options.valign == 'top' ? options.padding : options.valign == 'bottom' ? h - options.padding : Math.floor(h / 2),
+      left: options.align == 'left' ? options.padding : options.align == 'right' ? w - options.padding : Math.floor(w / 2)
+    };
+    var offset = this.element.offset();
+    if (options.outside) {
+      this.throbber.css({top: offset.top + 'px', left: offset.left + 'px'});
+    } else {
+      margin.top -= this.throbber.offset().top - offset.top;
+      margin.left -= this.throbber.offset().left - offset.left;
+    }
+    this.throbber.css({marginTop: margin.top + 'px', marginLeft: margin.left + 'px'});
+    this._animate(options.segments, Math.round(10 / options.speed) / 10);
+  },
+
+  _prepare: function() {
+    if ($.ui.throbber.renderMethod) {
+      this.renderMethod = $.ui.throbber.renderMethod;
+      this.animateMethod = $.ui.throbber.animateMethod;
+      return;
+    }
+    if (document.createElementNS && document.createElementNS( "http://www.w3.org/2000/svg", "svg").createSVGRect) {
+      $.ui.throbber.renderMethod = 'SVG';
+      if (document.createElement('div').style.WebkitAnimationName !== undefined) {
+        $.ui.throbber.animateMethod = 'CSS';
+      } else {
+        $.ui.throbber.animateMethod = 'SVG';
+      }
+    } else if (this._prepareVML()) {
+      $.ui.throbber.renderMethod = $.ui.throbber.animateMethod = 'VML';
+    } else {
+      $.ui.throbber.renderMethod = $.ui.throbber.animateMethod = 'DOM';
+    }
+    this.renderMethod = $.ui.throbber.renderMethod;
+    this.animateMethod = $.ui.throbber.animateMethod;
+  },
+
+  _prepareVML: function() {
+    var s = $('<shape>').css('behavior', 'url(#default#VML)');
+    var ok = false;
+    $('body').append(s);
+    if (s.get(0).adj) {
+      // VML support detected. Insert CSS rules for group, shape and stroke.
+      var sheet = document.createStyleSheet();
+      $.each(['group', 'shape', 'stroke'], function() {
+        sheet.addRule(this, "behavior:url(#default#VML);");
+      });
+      ok = true;
+    }
+    $(s).remove();
+    return ok;
+  },
+
+  _getOpacity: function(i) {
+    var steps = this.options.steps || this.options.segments-1;
+    var end = this.options.opacity !== undefined ? this.options.opacity : 1/steps;
+    return 1 - Math.min(i, steps) * (1 - end) / steps;
+  },
+
+  _render: function() {
+    return this['_render'+this.renderMethod]();
+  },
+
+  _renderDOM: function() {
+    return $('<div>').addClass('ui-throbber');
+  },
+
+  _renderSVG: function() {
+    var o = this.options;
+    var innerRadius = o.width*2 + o.space;
+    var r = (innerRadius + o.length + Math.ceil(o.width / 2) + 1);
+      
+    var el = svg().width(r*2).height(r*2);
+      
+    var g = svg('g', {
+      'stroke-width': o.width, 
+      'stroke-linecap': 'round', 
+      stroke: o.color
+    }).appendTo(svg('g', {transform: 'translate('+ r +','+ r +')'}).appendTo(el));
+      
+    for (var i = 0; i < o.segments; i++) {
+      g.append(svg('line', {
+        x1: 0, 
+        y1: innerRadius, 
+        x2: 0, 
+        y2: innerRadius + o.length, 
+        transform: 'rotate(' + (360 / o.segments * i) + ', 0, 0)',
+        opacity: this._getOpacity(i)
+      }));
+    }
+    return $('<div>').append(el).width(2*r).height(2*r);
+  },
+
+  _renderVML: function() {
+    var o = this.options;
+    var innerRadius = o.width*2 + o.space;
+    var r = (innerRadius + o.length + Math.ceil(o.width / 2) + 1);
+    var s = r*2;
+    var c = -Math.ceil(s/2);
+        
+    var el = $('<group>', {coordsize: s + ' ' + s, coordorigin: c + ' ' + c}).css({top: c, left: c, width: s, height: s});
+    for (var i = 0; i < o.segments; i++) {
+      el.append($('<shape>', {path: 'm ' + innerRadius + ',0  l ' + (innerRadius + o.length) + ',0'}).css({
+        width: s,
+        height: s,
+        rotation: (360 / o.segments * i) + 'deg'
+      }).append($('<stroke>', {color: o.color, weight: o.width + 'px', endcap: 'round', opacity: this._getOpacity(i)})));
+    }
+    return $('<group>', {coordsize: s + ' ' + s}).css({width: s, height: s, overflow: 'hidden'}).append(el);
+  },
+
+  _animate: function(steps, duration) {
+    this['_animate'+this.animateMethod](steps, duration);
+  },
+
+  _animateCSS: function(steps, duration) {
+    if (!animations[steps]) {
+      var name = 'spin' + steps;
+      var rule = '@-webkit-keyframes '+ name +' {';
+      for (var i=0; i < steps; i++) {
+        var p1 = Math.round(100000 / steps * i) / 1000;
+        var p2 = Math.round(100000 / steps * (i+1) - 1) / 1000;
+        var value = '% { -webkit-transform:rotate(' + Math.round(360 / steps * i) + 'deg); }\n';
+        rule += p1 + value + p2 + value; 
+      }
+      rule += '100% { -webkit-transform:rotate(100deg); }\n}';
+      document.styleSheets[0].insertRule(rule);
+      animations[steps] = name;
+    }
+    this.throbber.css('-webkit-animation', animations[steps] + ' ' + duration +'s linear infinite');
+  },
+
+  _animateSVG: function(steps, duration) {
+    var rotation = 0;
+    var g = this.throbber.find('g g').get(0);
+    this.interval = setInterval(function() {
+      g.setAttributeNS(null, 'transform', 'rotate(' + (++rotation % steps * (360 / steps)) + ')');
+    },  duration * 1000 / steps);
+  },
+
+  _animateVML: function(steps, duration) {
+    var rotation = 0;
+    var g = this.throbber.get(0);
+    this.interval = setInterval(function() {
+      g.style.rotation = ++rotation % steps * (360 / steps);
+    },  duration * 1000 / steps);
+  },
+
+  _animateDOM: function(steps, duration) {}
+
+});
+
+/**
+ * Utility function to create elements in the SVG namespace.
+ */
+function svg(tag, attr) {
+  var el = document.createElementNS("http://www.w3.org/2000/svg", tag || 'svg');
+  if (attr) {
+    $.each(attr, function(k, v) {
+      el.setAttributeNS(null, k, v);
+    });
   }
+  return $(el);
+}
+
+var animations = {};
+
+})(jQuery);
+
+})({});
+
+
+(function(exports) {
+
+
+/*
+ * JUI.Throbber 
+ */
+
+JUI.Throbber = SC.View.extend(JUI.Widget, {
+  uiType: 'throbber',
+  uiOptions: ['segments', 'space', 'length', 'width',
+    'speed', 'align', 'valign', 'padding', 'autoStart', 'outside']
 });
 
 })({});
@@ -696,26 +948,14 @@ jQuery.extend(proto, {
 
 
 
-var get = SC.get;
 
-/**
-  @class
-  @since SproutCore JUI 1.0
-  @extends JUI.AutocompleteTextField
-*/
-JUI.AutocompleteTextField = SC.TextField.extend(JUI.Widget, JUI.TargetSupport, {
-  uiType: 'autocomplete',
-  uiOptions: ['source', 'delay', 'position', 'minLength', 'html'],
-  uiEvents: ['select', 'focus', 'open', 'close'],
 
-  select: function(event, ui) {
-    if (ui.item) {
-      this.executeAction(get(this, 'action'), ui.item.value);
-      event.target.value = '';
-      event.preventDefault();
-    }
-  }
-});
+
+
+
+
+
+
 
 })({});
 
@@ -727,6 +967,7 @@ JUI.AutocompleteTextField = SC.TextField.extend(JUI.Widget, JUI.TargetSupport, {
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
+//require('jquery-ui');
 
 
 })({});

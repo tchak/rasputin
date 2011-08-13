@@ -1,7 +1,9 @@
 
 (function(exports) {
 // lib/handlebars/base.js
-Handlebars = {};
+var Handlebars = {};
+
+window.Handlebars = Handlebars;
 
 Handlebars.VERSION = "1.0.beta.2";
 
@@ -1573,7 +1575,7 @@ if ('undefined' === typeof SC) {
 /**
   @namespace
   @name SC
-  @version 2.0.alpha
+  @version 2.0.beta.3
 
   All SproutCore methods and functions are defined inside of this namespace.
   You generally should not add new properties to this namespace as it may be
@@ -1602,10 +1604,10 @@ if ('undefined' !== typeof window) {
 /**
   @static
   @type String
-  @default '2.0.alpha'
+  @default '2.0.beta.3'
   @constant
 */
-SC.VERSION = '2.0.alpha';
+SC.VERSION = '2.0.beta.3';
 
 /**
   @static
@@ -2645,7 +2647,7 @@ Dp.set = function(obj, keyName, value) {
   @returns {Object} the current value
 */
 Dp.get = function(obj, keyName) {
-  return obj[keyName];
+  return w_get(obj, keyName, obj);
 };
 
 /**
@@ -2722,11 +2724,12 @@ var WATCHED_DESC = {
   set: SC.Descriptor.MUST_USE_SETTER
 };
 
-function w_get(obj, keyName) {
-  var m = meta(obj, false), values = m.values;
+function w_get(obj, keyName, values) {
+  values = values || meta(obj, false).values;
 
   if (values) {
-    if (keyName in values) { return values[keyName]; }
+    var ret = values[keyName];
+    if (ret !== undefined) { return ret; }
     if (obj.unknownProperty) { return obj.unknownProperty(keyName); }
   }
 
@@ -2814,7 +2817,7 @@ if (SC.platform.hasPropertyAccessors) {
   };
   
 }
-  
+
 /**
   The default descriptor for simple properties.  Pass as the third argument
   to SC.defineProperty() along with a value to set a simple value.
@@ -4778,7 +4781,7 @@ SC.Enumerable = SC.Mixin.create( /** @lends SC.Enumerable */ {
     to nextObject for the current iteration.  This is a useful way to
     manage iteration if you are tracing a linked list, for example.
 
-    Finally the context paramter will always contain a hash you can use as
+    Finally the context parameter will always contain a hash you can use as
     a "scratchpad" to maintain any other state you need in order to iterate
     properly.  The context object is reused and is not reset between
     iterations so make sure you setup the context with a fresh state whenever
@@ -8857,7 +8860,10 @@ function getTransformedValue(binding, val, obj, dir) {
       len        = transforms ? transforms.length : 0,
       idx;
 
-  for(idx=0;idx<len;idx++) { val = transforms[idx][dir].call(this, val, obj); }
+  for(idx=0;idx<len;idx++) {
+    var transform = transforms[idx][dir];
+    if (transform) { val = transform.call(this, val, obj); }
+  }
   return val;
 }
 
@@ -8869,6 +8875,11 @@ function getTransformedFromValue(obj, binding) {
   var operation = binding._operation;
   var fromValue = operation ? operation(obj, binding._from, binding._operand) : getPath(obj, binding._from);
   return getTransformedValue(binding, fromValue, obj, 'to');
+}
+
+function getTransformedToValue(obj, binding) {
+  var toValue = getPath(obj, binding._to);
+  return getTransformedValue(binding, toValue, obj, 'from');
 }
 
 var AND_OPERATION = function(obj, left, right) {
@@ -9134,7 +9145,9 @@ var Binding = SC.Object.extend({
     @returns {SC.Binding} this
   */
   transform: function(transform) {
-    sc_assert("Binding transforms must be a hash with a `to` and optional `from` property", transform && transform.to);
+    if ('function' === typeof transform) {
+      transform = { to: transform };
+    }
 
     if (!this._transforms) this._transforms = [];
     this._transforms.push(transform);
@@ -9386,7 +9399,7 @@ var Binding = SC.Object.extend({
 
     // apply any operations to the object, then apply transforms
     var fromValue = getTransformedFromValue(obj, this);
-    var toValue = getPath(obj, toPath);
+    var toValue   = getTransformedToValue(obj, this);
 
     if (toValue === fromValue) { return; }
 
@@ -10923,18 +10936,18 @@ SC.View = SC.Object.extend(
     // Loop through all of the configured bindings. These will be either
     // property names ('isUrgent') or property paths relative to the view
     // ('content.isUrgent')
-    classBindings.forEach(function(property) {
+    classBindings.forEach(function(binding) {
 
       // Variable in which the old class value is saved. The observer function
       // closes over this variable, so it knows which string to remove when
       // the property changes.
-      var oldClass;
+      var oldClass, property;
 
       // Set up an observer on the context. If the property changes, toggle the
       // class name.
       var observer = function() {
         // Get the current value of the property
-        newClass = this._classStringForProperty(property);
+        newClass = this._classStringForProperty(binding);
         elem = this.$();
 
         // If we had previously added a class to the element, remove it.
@@ -10952,10 +10965,8 @@ SC.View = SC.Object.extend(
         }
       };
 
-      addObserver(this, property, observer);
-
       // Get the class name for the property at its current value
-      dasherizedClass = this._classStringForProperty(property);
+      dasherizedClass = this._classStringForProperty(binding);
 
       if (dasherizedClass) {
         // Ensure that it gets into the classNames array
@@ -10967,6 +10978,10 @@ SC.View = SC.Object.extend(
         // been closed over by the observer.
         oldClass = dasherizedClass;
       }
+
+      // Extract just the property name from bindings like 'foo:bar'
+      property = binding.split(':')[0];
+      addObserver(this, property, observer);
     }, this);
   },
 
@@ -11419,12 +11434,8 @@ SC.View = SC.Object.extend(
 
     viewMeta.lengthBeforeRender = getPath(this, 'childViews.length');
 
-    SC.beginPropertyChanges(this);
-
     this.applyAttributesToBuffer(buffer);
     this.render(buffer);
-
-    SC.endPropertyChanges(this);
 
     viewMeta.lengthAfterRender = getPath(this, 'childViews.length');
 
@@ -11590,9 +11601,10 @@ SC.View = SC.Object.extend(
       var view;
 
       if ('string' === typeof viewName) {
-        view = this[viewName];
+        view = get(this, viewName);
         view = this.createChildView(view);
-        childViews[idx] = this[viewName] = view;
+        childViews[idx] = view;
+        set(this, viewName, view);
       } else if (viewName.isClass) {
         view = this.createChildView(viewName);
         childViews[idx] = view;
