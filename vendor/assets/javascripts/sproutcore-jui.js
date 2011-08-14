@@ -257,7 +257,7 @@ var get = SC.get;
 */
 JUI.Button = SC.Button.extend(JUI.Widget, {
   uiType: 'button',
-  uiOptions: ['label', '_icons'],
+  uiOptions: ['label'],
 
   isActiveBinding: SC.Binding.oneWay('.disabled'),
 

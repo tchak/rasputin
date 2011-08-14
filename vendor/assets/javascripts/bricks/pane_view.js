@@ -10,19 +10,20 @@ SB = this.SB || {};
 SB.PaneView = SC.View.extend(SB.ToggleViewSupport, {
   templateNamePrefix: null,
   rootElement: '[role="application"]',
+  classNames: ['pane'],
+  classNameBindings: ['paneClassName'],
 
-  init: function() {
-    this._super();
-    var paneName = this.get('name');
-    this.set('classNames', [paneName + '-pane']);
-    var templateName = this.get('templateNamePrefix');
-    if (templateName) {
-      templateName += '_' + paneName;
-    } else {
-      templateName = paneName;
+  templateName: function() {
+    var prefix = this.get('templateNamePrefix');
+    if (prefix) {
+      return prefix + '_' + this.get('name');
     }
-    this.set('templateName', templateName);
-  },
+    return this.get('name');
+  }.property('templateNamePrefix', 'name').cacheable(),
+
+  paneClassName: function() {
+    return this.get('name') + '-pane';
+  }.property('name').cacheable(),
 
   append: function() {
     var currentPane = SB.PaneView.currentPane;
