@@ -6,16 +6,24 @@
 // pane_view.js
 // ==========================================================================
 SB = this.SB || {};
-SB.APP_NAMESPACE = 'App';
 
-SB.PaneView = SC.View.extend({
+SB.PaneView = SC.View.extend(SB.ToggleViewSupport, {
+  templateNamePrefix: null,
+  rootElement: '[role="application"]',
+
   init: function() {
     this._super();
     var paneName = this.get('name');
-    this.set('classNames', ['%@-pane'.fmt(paneName)]);
-    var templateName = [SB.PaneView.TEMPLATES_ROOT, paneName].join('_').replace(/^_/, '');
+    this.set('classNames', [paneName + '-pane']);
+    var templateName = this.get('templateNamePrefix');
+    if (templateName) {
+      templateName += '_' + paneName;
+    } else {
+      templateName = paneName;
+    }
     this.set('templateName', templateName);
   },
+
   append: function() {
     var currentPane = SB.PaneView.currentPane;
     if (currentPane && currentPane.state === 'inDOM') {
@@ -24,47 +32,21 @@ SB.PaneView = SC.View.extend({
     if (this.state === 'inDOM') {
       this.show();
     } else {
-      this.appendTo(SB.PaneView.SELECTOR); 
+      this.appendTo(this.get('rootElement')); 
     }
     SB.PaneView.currentPane = this;
   }
 });
 
-SB.PaneView.reopenClass({
-  TEMPLATES_ROOT: null,
-  SELECTOR: '[role="application"]',
-  currentPane: null,
-  panes: []
-});
+SC.Application.reopen({
+  paneViewClass: SB.PaneView,
 
-SC.View.reopen({
-  toggleMethod: 'toggle',
-
-  _isVisibleDidChange: function() {
-    var method = this.$()[this.get('toggleMethod')];
-    if (!method) { method = 'toggle'; }
-    method.call(this.$(), this.get('isVisible'));
-  }.observes('isVisible'),
-
-  show: function() {
-    this.set('isVisible', true);
-  },
-  hide: function() {
-    this.set('isVisible', false);
-  },
-  toggle: function() {
-    this.toggleProperty('isVisible');
+  createPanes: function(panes) {
+    var paneViewClass = this.get('paneViewClass');
+    (panes || []).forEach(function(paneName) {
+      this["%@PaneView".fmt(paneName)] = paneViewClass.create({
+        name: paneName.toLowerCase()
+      });
+    }, this);
   }
-});
-
-SC.$(document).ready(function() {
-  var app = window[SB.APP_NAMESPACE];
-  if (SB.PaneView.panes.length > 0 && !app) {
-    throw SC.Error("You have to set SB.APP_NAMESPACE to your SC.Application path");
-  }
-  SB.PaneView.panes.forEach(function(paneName) {
-    app["%@PaneView".fmt(paneName)] = SB.PaneView.create({
-      name: paneName.toLowerCase()
-    });
-  });
 });

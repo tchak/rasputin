@@ -9,11 +9,11 @@ SB = this.SB || {};
 
 SB.RestDataSource = SC.DataSource.extend({
 
-  resourcePrefix: null,
+  storagePrefix: null,
 
   resourceURL: function(recordType, store, storeKey) {
     var id, resourceName = recordType.resourceName,
-        prefix = this.get('resourcePrefix');
+        prefix = this.get('storagePrefix');
     if (!resourceName) {
       throw SC.Error.create("You have to define resourceName on %@ ...".fmt(recordType));
     }
