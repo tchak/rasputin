@@ -26,10 +26,11 @@ Examples :
 
 ChangesLog :
 
-  0.7.0 :
-    * add sproutcore-bricks
+0.7.0 :
 
-  0.6.0 :
+* add sproutcore-bricks
 
-    * update to lates sproutcore 2 (beta3)
-    * lots of fixes for sproutcore-jui
+0.6.0 :
+
+* update to lates sproutcore 2 (beta3)
+* lots of fixes for sproutcore-jui
