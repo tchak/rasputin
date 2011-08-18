@@ -8,11 +8,11 @@ It provide direct requires for official sproutcore packages :
 * sproutcore
 * sproutcore-datastore
 * sproutcore-statechart
+* sproutcore-touch
 
 And it also provides some unnoficial packages :
 
 * sproutcore-jui (jQuery UI wrappers for sc 2.0)
-* sproutcore-ajax (backport form sc 1.x API but using jQuery $.ajax)
 * sproutcore-i18n (integration with i18n-js gem)
 * sproutcore-bricks (some useful bricks extracted form my projects)
 
@@ -25,6 +25,10 @@ Examples :
     todos/ui/templates/stats.handlebars >> SC.TEMPLATES['todos_ui_stats']
 
 ChangesLog :
+
+0.7.1 :
+
+* add sproutcore-touch
 
 0.7.0 :
 
