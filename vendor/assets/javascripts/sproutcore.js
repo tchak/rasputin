@@ -9227,7 +9227,7 @@ var Binding = SC.Object.extend({
     // Display warning for users using the SC 1.x-style API.
     sc_assert("notEmpty should only take a placeholder as a parameter. You no longer need to pass null as the first parameter.", arguments.length < 2);
 
-    if (!placeholder) { placeholder = SC.EMPTY_PLACEHOLDER; }
+    if (placeholder == undefined) { placeholder = SC.EMPTY_PLACEHOLDER; }
 
     this.transform({
       to: function(val) { return empty(val) ? placeholder : val; }
@@ -9245,7 +9245,7 @@ var Binding = SC.Object.extend({
     @returns {SC.Binding} this
   */
   notNull: function(placeholder) {
-    if (!placeholder) { placeholder = SC.EMPTY_PLACEHOLDER; }
+    if (placeholder == undefined) { placeholder = SC.EMPTY_PLACEHOLDER; }
 
     this.transform({
       to: function(val) { return val == null ? placeholder : val; }
@@ -10765,7 +10765,7 @@ SC.View = SC.Object.extend(
     var view = this.parentView;
 
     while (view) {
-      if (property in view.parentView) { return view; }
+      if (property in view) { return view; }
       view = view.parentView;
     }
   },
@@ -10912,7 +10912,7 @@ SC.View = SC.Object.extend(
 
     // VIEW-TODO: Unit test this path.
     var childViews = get(this, 'childViews');
-    for (var i=lengthBefore; i<lengthAfter; i++) {
+    for (var i=lengthAfter-1; i>=lengthBefore; i--) {
       childViews[i] && childViews[i].destroy();
     }
   },
