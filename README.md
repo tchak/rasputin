@@ -9,12 +9,12 @@ It provide direct requires for official sproutcore packages :
 * sproutcore-datastore
 * sproutcore-statechart
 * sproutcore-touch
+* sproutcore-ajax
 
 And it also provides some unnoficial packages :
 
 * sproutcore-jui (jQuery UI wrappers for sc 2.0)
 * sproutcore-i18n (integration with i18n-js gem)
-* sproutcore-bricks (some useful bricks extracted form my projects)
 
 Rasputin also provide sprockets engine for handlebars templates. Any template in your
 javascript assets folder with extention handlebars will be availabel in sproutcore.
@@ -24,7 +24,28 @@ Examples :
     todos/templates/item.handlebars >> SC.TEMPLATES['todos_item']
     todos/ui/templates/stats.handlebars >> SC.TEMPLATES['todos_ui_stats']
 
-ChangesLog :
+Install
+-------
+
+In Gemfile:
+
+    gem 'rasputin'
+
+In your asset manifest (app/assets/javascripts/application.js) add the following:
+
+    //= require sproutcore
+    
+And and any of the following you want to include:
+
+    //= require sproutcore-ajax
+    //= require sproutcore-datastore
+    //= require sproutcore-i18n
+    //= require sproutcore-jui
+    //= require sproutcore-statechart
+    //= require sproutcore-touch
+
+ChangeLog
+----------
 
 0.7.1 :
 
