@@ -9,11 +9,9 @@ It provide direct requires for official sproutcore packages :
 * sproutcore-datastore
 * sproutcore-statechart
 * sproutcore-touch
-* sproutcore-ajax
 
-And it also provides some unnoficial packages :
+And it also provides one unnoficial package :
 
-* sproutcore-jui (jQuery UI wrappers for sc 2.0)
 * sproutcore-i18n (integration with i18n-js gem)
 
 Rasputin also provide sprockets engine for handlebars templates. Any template in your
@@ -37,15 +35,18 @@ In your asset manifest (app/assets/javascripts/application.js) add the following
     
 And and any of the following you want to include:
 
-    //= require sproutcore-ajax
     //= require sproutcore-datastore
-    //= require sproutcore-i18n
-    //= require sproutcore-jui
     //= require sproutcore-statechart
     //= require sproutcore-touch
+    //= require sproutcore-i18n
 
 ChangeLog
 ----------
+
+0.8.0
+
+* remove unofficial packages. Prepare for more stable releases in sync with upstream.
+* sproutcore-jui will move in to it's own gem
 
 0.7.1 :
 
