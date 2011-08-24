@@ -33,7 +33,7 @@ In your asset manifest (app/assets/javascripts/application.js) add the following
 
     //= require sproutcore
     
-And and any of the following you want to include:
+And any of the following you want to include:
 
     //= require sproutcore-datastore
     //= require sproutcore-statechart
