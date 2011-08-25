@@ -29,7 +29,7 @@ In Gemfile:
 
     gem 'rasputin'
 
-In your asset manifest (app/assets/javascripts/application.js) add the following:
+In your javascript asset manifest (app/assets/javascripts/application.js) add the following:
 
     //= require sproutcore
     
@@ -40,8 +40,18 @@ And any of the following you want to include:
     //= require sproutcore-touch
     //= require sproutcore-i18n
 
+In your stylesheet asset manifest (app/assets/stylesheets/application.css) add the following:
+
+    /*
+     * = require normalize
+     */
+
 ChangeLog
 ----------
+
+0.8.1
+
+* add normalize.css
 
 0.8.0
 
