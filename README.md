@@ -49,6 +49,11 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 ChangeLog
 ----------
 
+0.8.2
+
+* rails 3.1 support
+* fix sproutcore-touch
+
 0.8.1
 
 * add normalize.css
