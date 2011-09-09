@@ -1,5 +1,3 @@
-require 'tilt'
-require 'sprockets/engines'
 
 module Rasputin
   class HandlebarsTemplate < Tilt::Template
@@ -20,7 +18,7 @@ SC.TEMPLATES[#{template_path(scope.logical_path).inspect}] = SC.Handlebars.compi
       def template_path(path)
         path = path.split('/')
         path.delete('templates')
-        path.join('_')
+        path.join('/')
       end
 
       def indent(string)
@@ -28,5 +26,3 @@ SC.TEMPLATES[#{template_path(scope.logical_path).inspect}] = SC.Handlebars.compi
       end
   end
 end
-
-Sprockets.register_engine '.handlebars', Rasputin::HandlebarsTemplate
