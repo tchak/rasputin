@@ -20,7 +20,7 @@ module Rasputin
     def template_path(path)
       path = path.split('/')
       path.delete('templates')
-      path.join('/')
+      path.join(Rails.configuration.rasputin.template_name_separator)
     end
 
     def indent(string)

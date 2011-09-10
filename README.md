@@ -19,8 +19,22 @@ javascript assets folder with extention handlebars will be availabel in sproutco
 
 Examples :
 
-    todos/templates/item.handlebars >> SC.TEMPLATES['todos_item']
-    todos/ui/templates/stats.handlebars >> SC.TEMPLATES['todos_ui_stats']
+    todos/templates/item.handlebars >> SC.TEMPLATES['todos/item']
+    todos/ui/templates/stats.handlebars >> SC.TEMPLATES['todos/ui/stats']
+    todos/templates/collection.hbs >> SC.TEMPLATES['todos/collection']
+
+If you want to keep using old naming scheme, put this in your rails configuration block :
+    
+    config.rasputin.template_name_separator = '_'
+
+The new default is '/'
+
+Precompilation :
+
+Starting with 0.9.0 release, Rasputin will precompile your handlebars templates.
+If you do not want this behavior you can tourn it off in your rails configuration block :
+
+    config.rasputin.precompile_handlebars = false
 
 Install
 -------
@@ -48,6 +62,17 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.9.1
+
+* you can change templates naming scheme in your configuration
+* add .hbs extention support
+
+0.9.0
+
+* add support for Handlebars precompilation (thanks to @SlexAxton)
+* add slim filter
+* change templates naming scheme, use '/' instead of '_'
 
 0.8.2
 
