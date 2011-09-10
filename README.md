@@ -36,6 +36,17 @@ If you do not want this behavior you can tourn it off in your rails configuratio
 
     config.rasputin.precompile_handlebars = false
 
+If you use Slim templates, you can use handlebars filter :
+
+    handlebars:
+        {{view SC.Button}}OK{{/view}}
+
+It will be translated as :
+    
+    <script type="text/x-handlebars">
+        {{view SC.Button}}OK{{/view}}
+    </script>
+
 Install
 -------
 
