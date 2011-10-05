@@ -1,3 +1,4 @@
+//= require sproutcore-utils
 
 (function(exports) {
 // ==========================================================================
@@ -27,7 +28,108 @@ SC.stateObserves = function(func) {
   return func;
 };
 
-})({});
+})({})
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SproutCore Statechart
+// Copyright: ©2006-2011 Strobe Inc. and contributors.
+//            Portions ©2008-2011 Apple Inc. All rights reserved.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+
+})({})
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SC.Statechart - A Statechart Framework for SproutCore
+// Copyright: ©2010, 2011 Michael Cohen, and contributors.
+//            Portions @2011 Apple Inc. All rights reserved.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+/*globals SC */
+
+SC.StatechartMonitor = SC.Object.extend({
+  
+  statechart: null,
+  
+  sequence: null,
+  
+  init: function() {
+    this.reset();
+  },
+  
+  reset: function() {
+    this.propertyWillChange('length');
+    this.sequence = [];
+    this.propertyDidChange('length');
+  },
+  
+  length: function() {
+    return this.sequence.length;
+  }.property(),
+  
+  pushEnteredState: function(state) {
+    this.propertyWillChange('length');
+    this.sequence.push({ action: 'entered', state: state });
+    this.propertyDidChange('length'); 
+  },
+  
+  pushExitedState: function(state) {
+    this.propertyWillChange('length');
+    this.sequence.push({ action: 'exited', state: state });
+    this.propertyDidChange('length');
+  },
+  
+  matchSequence: function() {
+    return SC.StatechartSequenceMatcher.create({
+      statechartMonitor: this
+    });
+  },
+  
+  matchEnteredStates: function() {
+    var expected = Array.prototype.slice.call(arguments.length === 1 ? arguments[0] : arguments),
+        actual = this.getPath('statechart.enteredStates'),
+        matched = 0,
+        statechart = this.get('statechart');
+    
+    if (expected.length !== actual.length) return NO;
+    
+    expected.forEach(function(item) {
+      if (SC.typeOf(item) === "string") item = statechart.getState(item);
+      if (!item) return;
+      if (statechart.stateIsEntered(item) && item.get('isEnteredState')) matched += 1;
+    });
+    
+    return matched === actual.length;
+  },
+  
+  toString: function() {
+    var seq = "",
+        i = 0,
+        len = 0,
+        item = null;
+    
+    seq += "[";    
+
+    len = this.sequence.length;
+    for (i = 0; i < len; i += 1) {
+      item = this.sequence[i];
+      seq += "%@ %@".fmt(item.action, item.state.get('fullPath'));
+      if (i < len - 1) seq += ", ";
+    }
+
+    seq += "]";
+
+    return seq;
+  }
+  
+});
+
+})({})
 
 
 (function(exports) {
@@ -221,96 +323,7 @@ SC.StatechartSequenceMatcher = SC.Object.extend({
   
 });
 
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SC.Statechart - A Statechart Framework for SproutCore
-// Copyright: ©2010, 2011 Michael Cohen, and contributors.
-//            Portions @2011 Apple Inc. All rights reserved.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-/*globals SC */
-
-SC.StatechartMonitor = SC.Object.extend({
-  
-  statechart: null,
-  
-  sequence: null,
-  
-  init: function() {
-    this.reset();
-  },
-  
-  reset: function() {
-    this.propertyWillChange('length');
-    this.sequence = [];
-    this.propertyDidChange('length');
-  },
-  
-  length: function() {
-    return this.sequence.length;
-  }.property(),
-  
-  pushEnteredState: function(state) {
-    this.propertyWillChange('length');
-    this.sequence.push({ action: 'entered', state: state });
-    this.propertyDidChange('length'); 
-  },
-  
-  pushExitedState: function(state) {
-    this.propertyWillChange('length');
-    this.sequence.push({ action: 'exited', state: state });
-    this.propertyDidChange('length');
-  },
-  
-  matchSequence: function() {
-    return SC.StatechartSequenceMatcher.create({
-      statechartMonitor: this
-    });
-  },
-  
-  matchEnteredStates: function() {
-    var expected = Array.prototype.slice.call(arguments.length === 1 ? arguments[0] : arguments),
-        actual = this.getPath('statechart.enteredStates'),
-        matched = 0,
-        statechart = this.get('statechart');
-    
-    if (expected.length !== actual.length) return NO;
-    
-    expected.forEach(function(item) {
-      if (SC.typeOf(item) === "string") item = statechart.getState(item);
-      if (!item) return;
-      if (statechart.stateIsEntered(item) && item.get('isEnteredState')) matched += 1;
-    });
-    
-    return matched === actual.length;
-  },
-  
-  toString: function() {
-    var seq = "",
-        i = 0,
-        len = 0,
-        item = null;
-    
-    seq += "[";    
-
-    len = this.sequence.length;
-    for (i = 0; i < len; i += 1) {
-      item = this.sequence[i];
-      seq += "%@ %@".fmt(item.action, item.state.get('fullPath'));
-      if (i < len - 1) seq += ", ";
-    }
-
-    seq += "]";
-
-    return seq;
-  }
-  
-});
-
-})({});
+})({})
 
 
 (function(exports) {
@@ -321,8 +334,7 @@ SC.StatechartMonitor = SC.Object.extend({
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-
-})({});
+})({})
 
 
 (function(exports) {
@@ -452,7 +464,21 @@ if (SC.EXTEND_PROTOTYPES) {
   }
 }
 
-})({});
+})({})
+
+
+(function(exports) {
+// ==========================================================================
+// Project:  SproutCore Runtime
+// Copyright: ©2011 Strobe Inc. and contributors.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+
+
+
+
+})({})
 
 
 (function(exports) {
@@ -463,7 +489,11 @@ if (SC.EXTEND_PROTOTYPES) {
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-})({});
+
+
+
+
+})({})
 
 
 (function(exports) {
@@ -554,7 +584,143 @@ SC.Async.reopenClass(/** @scope SC.Async */{
   
 });
 
-})({});
+})({})
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SC.Statechart - A Statechart Framework for SproutCore
+// Copyright: ©2010, 2011 Michael Cohen, and contributors.
+//            Portions @2011 Apple Inc. All rights reserved.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+/*globals SC */
+
+/** 
+  The default name given to an empty state
+*/
+SC.EMPTY_STATE_NAME = "__EMPTY_STATE__";
+
+/**
+  @class
+  
+  Represents an empty state that gets assigned as a state's initial substate 
+  if the state does not have an initial substate defined.
+
+  @extends SC.State
+*/
+SC.EmptyState = SC.State.extend(/** @scope SC.EmptyState.prototype */{
+  
+  name: SC.EMPTY_STATE_NAME,
+  
+  enterState: function() {
+    var msg = "No initial substate was defined for state %@. Entering default empty state";
+    this.stateLogWarning(msg.fmt(this.get('parentState')));
+  }
+  
+});
+
+})({})
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   SC.Statechart - A Statechart Framework for SproutCore
+// Copyright: ©2010, 2011 Michael Cohen, and contributors.
+//            Portions @2011 Apple Inc. All rights reserved.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+/*globals SC */
+
+/**
+  @class
+
+  Represents a history state that can be assigned to a SC.State object's
+  initialSubstate property. 
+  
+  If a SC.HistoryState object is assigned to a state's initial substate, 
+  then after a state is entered the statechart will refer to the history 
+  state object to determine the next course of action. If the state has 
+  its historyState property assigned then the that state will be entered, 
+  otherwise the default state assigned to history state object will be entered.
+  
+  An example of how to use:
+  
+    stateA: SC.State.extend({
+    
+      initialSubstate: SC.HistoryState({
+        defaultState: 'stateB'
+      }),
+      
+      stateB: SC.State.extend({ ... }),
+      
+      stateC: SC.State.extend({ ... })
+    
+    })
+  
+  @author Michael Cohen
+  @extends SC.Object
+*/
+SC.HistoryState = SC.Object.extend(
+  /** @scope SC.HistoryState.prototype */{
+
+  /**
+    Used to indicate if the statechart should recurse the 
+    history states after entering the this object's parent state
+    
+    @property {Boolean}
+  */
+  isRecursive: NO,
+  
+  /**
+    The default state to enter if the parent state does not
+    yet have its historyState property assigned to something 
+    other than null.
+    
+    The value assigned to this property must be the name of an
+    immediate substate that belongs to the parent state. The
+    statechart will manage the property upon initialization.
+    
+    @property {String}
+  */
+  defaultState: null,
+  
+  /** @private
+    Managed by the statechart 
+    
+    The statechart that owns this object.
+  */
+  statechart: null,
+  
+  /** @private
+    Managed by the statechart 
+  
+    The state that owns this object
+  */
+  parentState: null,
+  
+  /**
+    Used by the statechart during a state transition process. 
+    
+    Returns a state to enter based on whether the parent state has
+    its historyState property assigned. If not then this object's
+    assigned default state is returned.
+  */
+  state: function() {
+    var defaultState = this.get('defaultState'),
+        historyState = this.getPath('parentState.historyState');
+    return !!historyState ? historyState : defaultState;
+  }.property().cacheable(),
+  
+  /** @private */
+  parentHistoryStateDidChange: function() {
+    this.notifyPropertyChange('state');
+  }.observes('*parentState.historyState')
+  
+});
+
+})({})
 
 
 (function(exports) {
@@ -807,7 +973,7 @@ SC.State = SC.Object.extend(
       if (valueIsFunc && value.statePlugin) {
         value = value.apply(this);
       }
-      if (key === "a") { debugger; }
+
       if (SC.State.detect(value) && value.isClass && this[key] !== this.constructor) {
         state = this.createSubstate(value, { stateName: key, parentState: this, statechart: statechart });
         substates.push(state);
@@ -1270,13 +1436,13 @@ SC.State = SC.Object.extend(
           // action handler that handles 'frozen' and 'canuck'
           actionHandlerA: function(action, arg1, arg2) {
             ...
-          }.handleAction('frozen', 'canuck'),
+          }.handleActions('frozen', 'canuck'),
         
           // action handler that handles actions matching the regular expression /num\d/
           //   ex. num1, num2
           actionHandlerB: function(action, arg1, arg2) {
             ...
-          }.handleAction(/num\d/),
+          }.handleActions(/num\d/),
         
           // Handle any action that was not handled by some other
           // method on the state
@@ -1614,143 +1780,7 @@ SC.State.plugin = function(value) {
   return func;
 };
 
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SC.Statechart - A Statechart Framework for SproutCore
-// Copyright: ©2010, 2011 Michael Cohen, and contributors.
-//            Portions @2011 Apple Inc. All rights reserved.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-/*globals SC */
-
-/** 
-  The default name given to an empty state
-*/
-SC.EMPTY_STATE_NAME = "__EMPTY_STATE__";
-
-/**
-  @class
-  
-  Represents an empty state that gets assigned as a state's initial substate 
-  if the state does not have an initial substate defined.
-
-  @extends SC.State
-*/
-SC.EmptyState = SC.State.extend(/** @scope SC.EmptyState.prototype */{
-  
-  name: SC.EMPTY_STATE_NAME,
-  
-  enterState: function() {
-    var msg = "No initial substate was defined for state %@. Entering default empty state";
-    this.stateLogWarning(msg.fmt(this.get('parentState')));
-  }
-  
-});
-
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SC.Statechart - A Statechart Framework for SproutCore
-// Copyright: ©2010, 2011 Michael Cohen, and contributors.
-//            Portions @2011 Apple Inc. All rights reserved.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-/*globals SC */
-
-/**
-  @class
-
-  Represents a history state that can be assigned to a SC.State object's
-  initialSubstate property. 
-  
-  If a SC.HistoryState object is assigned to a state's initial substate, 
-  then after a state is entered the statechart will refer to the history 
-  state object to determine the next course of action. If the state has 
-  its historyState property assigned then the that state will be entered, 
-  otherwise the default state assigned to history state object will be entered.
-  
-  An example of how to use:
-  
-    stateA: SC.State.extend({
-    
-      initialSubstate: SC.HistoryState({
-        defaultState: 'stateB'
-      }),
-      
-      stateB: SC.State.extend({ ... }),
-      
-      stateC: SC.State.extend({ ... })
-    
-    })
-  
-  @author Michael Cohen
-  @extends SC.Object
-*/
-SC.HistoryState = SC.Object.extend(
-  /** @scope SC.HistoryState.prototype */{
-
-  /**
-    Used to indicate if the statechart should recurse the 
-    history states after entering the this object's parent state
-    
-    @property {Boolean}
-  */
-  isRecursive: NO,
-  
-  /**
-    The default state to enter if the parent state does not
-    yet have its historyState property assigned to something 
-    other than null.
-    
-    The value assigned to this property must be the name of an
-    immediate substate that belongs to the parent state. The
-    statechart will manage the property upon initialization.
-    
-    @property {String}
-  */
-  defaultState: null,
-  
-  /** @private
-    Managed by the statechart 
-    
-    The statechart that owns this object.
-  */
-  statechart: null,
-  
-  /** @private
-    Managed by the statechart 
-  
-    The state that owns this object
-  */
-  parentState: null,
-  
-  /**
-    Used by the statechart during a state transition process. 
-    
-    Returns a state to enter based on whether the parent state has
-    its historyState property assigned. If not then this object's
-    assigned default state is returned.
-  */
-  state: function() {
-    var defaultState = this.get('defaultState'),
-        historyState = this.getPath('parentState.historyState');
-    return !!historyState ? historyState : defaultState;
-  }.property().cacheable(),
-  
-  /** @private */
-  parentHistoryStateDidChange: function() {
-    this.notifyPropertyChange('state');
-  }.observes('*parentState.historyState')
-  
-});
-
-})({});
+})({})
 
 
 (function(exports) {
@@ -2591,17 +2621,17 @@ SC.StatechartManager = /** @scope SC.StatechartManager.prototype */{
     Method can be called in the following ways:
     
         // With one arguments. 
-        gotoHistorytate(<state>)
+        gotoHistoryState(<state>)
       
         // With two arguments. 
-        gotoHistorytate(<state>, <state | boolean | hash>)
+        gotoHistoryState(<state>, <state | boolean | hash>)
       
         // With three arguments.
-        gotoHistorytate(<state>, <state>, <boolean | hash>)
-        gotoHistorytate(<state>, <boolean>, <hash>)
+        gotoHistoryState(<state>, <state>, <boolean | hash>)
+        gotoHistoryState(<state>, <boolean>, <hash>)
       
         // With four argumetns
-        gotoHistorytate(<state>, <state>, <boolean>, <hash>)
+        gotoHistoryState(<state>, <state>, <boolean>, <hash>)
     
     where <state> is either a SC.State object or a string and <hash> is a regular JS hash object.
     
@@ -2668,7 +2698,7 @@ SC.StatechartManager = /** @scope SC.StatechartManager.prototype */{
         state = null,
         trace = get(this, 'allowStatechartTracing');
     
-    if (this._sendActionLocked || this._goStateLocked) {
+    if (this._sendActionLocked || this._gotoStateLocked) {
       // Want to praction any actions from being processed by the states until 
       // they have had a chance to handle the most immediate action or completed 
       // a state transition
@@ -3232,33 +3262,4 @@ SC.Statechart = SC.Object.extend(SC.StatechartManager, {
   autoInitStatechart: false
 });
 
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   SproutCore Statechart
-// Copyright: ©2006-2011 Strobe Inc. and contributors.
-//            Portions ©2008-2011 Apple Inc. All rights reserved.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-
-
-
-
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:  SproutCore Runtime
-// Copyright: ©2011 Strobe Inc. and contributors.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-
-
-
-
-})({});
+})({})

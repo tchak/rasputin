@@ -1,3 +1,4 @@
+//=require jquery
 
 (function(exports) {
 // lib/handlebars/base.js

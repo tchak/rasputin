@@ -1,3 +1,4 @@
+//= require sproutcore
 
 (function(exports) {
 // Vector and Matrix mathematics modules for JavaScript
