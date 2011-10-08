@@ -1,329 +1,5 @@
-//= require sproutcore
-
-(function(exports) {
-// Vector and Matrix mathematics modules for JavaScript
-// Copyright (c) 2007 James Coglan
-// 
-// Permission is hereby granted, free of charge, to any person obtaining
-// a copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
-
-var Sylvester = {
-  version: '0.1.3',
-  precision: 1e-6
-};
-
-function Matrix() {}
-Matrix.prototype = {
-
-  // Returns element (i,j) of the matrix
-  e: function(i,j) {
-    if (i < 1 || i > this.elements.length || j < 1 || j > this.elements[0].length) { return null; }
-    return this.elements[i-1][j-1];
-  },
-
-  // Maps the matrix to another matrix (of the same dimensions) according to the given function
-  map: function(fn) {
-    var els = [], ni = this.elements.length, ki = ni, i, nj, kj = this.elements[0].length, j;
-    do { i = ki - ni;
-      nj = kj;
-      els[i] = [];
-      do { j = kj - nj;
-        els[i][j] = fn(this.elements[i][j], i + 1, j + 1);
-      } while (--nj);
-    } while (--ni);
-    return Matrix.create(els);
-  },
-
-  // Returns the result of multiplying the matrix from the right by the argument.
-  // If the argument is a scalar then just multiply all the elements. If the argument is
-  // a vector, a vector is returned, which saves you having to remember calling
-  // col(1) on the result.
-  multiply: function(matrix) {
-    if (!matrix.elements) {
-      return this.map(function(x) { return x * matrix; });
-    }
-    var returnVector = matrix.modulus ? true : false;
-    var M = matrix.elements || matrix;
-    if (typeof(M[0][0]) == 'undefined') { M = Matrix.create(M).elements; }
-    if (!this.canMultiplyFromLeft(M)) { return null; }
-    var ni = this.elements.length, ki = ni, i, nj, kj = M[0].length, j;
-    var cols = this.elements[0].length, elements = [], sum, nc, c;
-    do { i = ki - ni;
-      elements[i] = [];
-      nj = kj;
-      do { j = kj - nj;
-        sum = 0;
-        nc = cols;
-        do { c = cols - nc;
-          sum += this.elements[i][c] * M[c][j];
-        } while (--nc);
-        elements[i][j] = sum;
-      } while (--nj);
-    } while (--ni);
-    var M = Matrix.create(elements);
-    return returnVector ? M.col(1) : M;
-  },
-
-  x: function(matrix) { return this.multiply(matrix); },
-  
-  // Returns true iff the matrix can multiply the argument from the left
-  canMultiplyFromLeft: function(matrix) {
-    var M = matrix.elements || matrix;
-    if (typeof(M[0][0]) == 'undefined') { M = Matrix.create(M).elements; }
-    // this.columns should equal matrix.rows
-    return (this.elements[0].length == M.length);
-  },
-
-  // Set the matrix's elements from an array. If the argument passed
-  // is a vector, the resulting matrix will be a single column.
-  setElements: function(els) {
-    var i, elements = els.elements || els;
-    if (typeof(elements[0][0]) != 'undefined') {
-      var ni = elements.length, ki = ni, nj, kj, j;
-      this.elements = [];
-      do { i = ki - ni;
-        nj = elements[i].length; kj = nj;
-        this.elements[i] = [];
-        do { j = kj - nj;
-          this.elements[i][j] = elements[i][j];
-        } while (--nj);
-      } while(--ni);
-      return this;
-    }
-    var n = elements.length, k = n;
-    this.elements = [];
-    do { i = k - n;
-      this.elements.push([elements[i]]);
-    } while (--n);
-    return this;
-  }
-};
-
-// Constructor function
-Matrix.create = function(elements) {
-  var M = new Matrix();
-  return M.setElements(elements);
-};
-
-// Utility functions
-$M = Matrix.create;
-
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:  AcceleratedEffects        
-// Copyright: ©2011 Majd Taby
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-(function($) {
-  if ( !$.cssHooks ) {
-    throw("jQuery 1.4.3+ is needed for this plugin to work");
-    return;
-  }
-  
-  function styleSupport( prop ) {
-    var vendorProp, supportedProp,
-
-        // capitalize first character of the prop to test vendor prefix
-        capProp = prop.charAt(0).toUpperCase() + prop.slice(1),
-        prefixes = [ "Moz", "Webkit", "O", "ms" ],
-        div = document.createElement( "div" );
-
-    if ( prop in div.style ) {
-
-      // browser supports standard CSS property name
-      supportedProp = prop;
-    } else {
-
-      // otherwise test support for vendor-prefixed property names
-      for ( var i = 0; i < prefixes.length; i++ ) {
-        vendorProp = prefixes[i] + capProp;
-        if ( vendorProp in div.style ) {
-          supportedProp = vendorProp;
-          break;
-        }
-      }
-    }
-
-    // avoid memory leak in IE
-    div = null;
-    
-    // add property to $.support so it can be accessed elsewhere
-    $.support[ prop ] = supportedProp;
-    
-    return supportedProp;
-  }
-  
-  var transformProperty = styleSupport('transform');
-  console.log(transformProperty);
-  
-  var properties = {
-    rotateX: {
-      defaultValue: 0
-    },
-    rotateY: {
-      defaultValue: 0
-    },
-    rotateZ: {
-      defaultValue: 0
-    },
-    translateX: {
-      defaultValue: 0
-    },
-    translateY: {
-      defaultValue: 0
-    },
-    translateZ: {
-      defaultValue: 0
-    },
-    scale: {
-      defaultValue: 1
-    }
-  };
-
-  var RotationXMatrix = function(a) {
-    return $M([
-      [1,0,0,0],
-      [0,Math.cos(a), Math.sin(-a), 0],
-      [0,Math.sin(a), Math.cos( a), 0],
-      [0,0,0,1]
-    ]);
-  };
-
-  var RotationYMatrix = function(b) {
-    return $M([
-      [Math.cos( b), 0, Math.sin(b),0],
-      [0,1,0,0],
-      [Math.sin(-b), 0, Math.cos(b), 0],
-      [0,0,0,1]
-    ]);
-  };
-
-  var RotationZMatrix = function(c) {
-    return $M([
-      [Math.cos(c), Math.sin(-c), 0, 0],
-      [Math.sin(c), Math.cos( c), 0, 0],
-      [0,0,1,0],
-      [0,0,0,1]
-    ]);
-  };
-
-  var TranslationMatrix = function(tx,ty,tz) {
-    return $M([
-      [1,0,0,0],
-      [0,1,0,0],
-      [0,0,1,0],
-      [tx,ty,tz,1]
-    ]);
-  };
-
-  var ScaleMatrix = function(s) {  
-    return $M([
-      [s,0,0,0],
-      [0,s,0,0],
-      [0,0,s,0],
-      [0,0,0,1]
-    ]);
-  };
-  
-  var applyMatrix = function(elem) {
-      var transforms = $(elem).data('transforms');
-
-      var rotX = transforms.rotateX || properties.rotateX.defaultValue,
-          rotY = transforms.rotateY || properties.rotateY.defaultValue,
-          rotZ = transforms.rotateZ || properties.rotateZ.defaultValue,
-          scale = transforms.scale || properties.scale.defaultValue,
-          translateX = transforms.translateX || properties.translateX.defaultValue,
-          translateY = transforms.translateY || properties.translateY.defaultValue,
-          translateZ = transforms.translateZ || properties.translateZ.defaultValue;
-
-      var tM = RotationXMatrix(rotX)
-                .x(RotationYMatrix(rotY))
-                .x(RotationZMatrix(rotZ))
-                .x(ScaleMatrix(scale))
-                .x(TranslationMatrix(translateX,translateY,translateZ));
-      
-      s  = "matrix3d(";
-        s += tM.e(1,1).toFixed(10) + "," + tM.e(1,2).toFixed(10) + "," + tM.e(1,3).toFixed(10) + "," + tM.e(1,4).toFixed(10) + ",";
-        s += tM.e(2,1).toFixed(10) + "," + tM.e(2,2).toFixed(10) + "," + tM.e(2,3).toFixed(10) + "," + tM.e(2,4).toFixed(10) + ",";
-        s += tM.e(3,1).toFixed(10) + "," + tM.e(3,2).toFixed(10) + "," + tM.e(3,3).toFixed(10) + "," + tM.e(3,4).toFixed(10) + ",";
-        s += tM.e(4,1).toFixed(10) + "," + tM.e(4,2).toFixed(10) + "," + tM.e(4,3).toFixed(10) + "," + tM.e(4,4).toFixed(10);
-      s += ")";
-      
-      elem.style[transformProperty] = s;
-  }
-  
-  var hookFor = function(name) {
-    
-    $.fx.step[name] = function(fx){
-      $.cssHooks[name].set( fx.elem, fx.now + fx.unit );
-    };
-    
-    return {
-      get: function( elem, computed, extra ) {
-        var transforms = $(elem).data('transforms');
-        if (transforms === undefined) {
-          transforms = {};
-          $(elem).data('transforms',transforms);
-        }
-        
-        return transforms[name] || properties[name].defaultValue;
-      },
-      set: function( elem, value) {
-        var transforms = $(elem).data('transforms');
-        if (transforms === undefined) transforms = {};
-        var propInfo = properties[name];
-
-        if (typeof propInfo.apply === 'function') {
-          transforms[name] = propInfo.apply(transforms[name] || propInfo.defaultValue, value);
-        } else {
-          transforms[name] = value
-        }
-        
-        $(elem).data('transforms',transforms);
-        applyMatrix(elem);
-      }
-    }
-  }
-
-  if (transformProperty) {
-    for (var name in properties) {
-      $.cssHooks[name] = hookFor(name);
-      $.cssNumber[name] = true;
-    } 
-  }
-
-})(jQuery);
-
-})({});
-
-
-(function(exports) {
-// ==========================================================================
-// Project:   AcceleratedEffects
-// Copyright: ©2011 Majd Taby
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
-
-})({});
+//=require sproutcore
+//=require TransformJS
 
 (function(exports) {
 // ==========================================================================
@@ -713,8 +389,7 @@ var sigFigs = 100;
   management, and provides some utility methods and some required methods all
   gesture recognizers are expected to implement.
 
-  Overview
-  =========
+  ## Overview
 
   Gestures coalesce multiple touch events to a single higher-level gesture
   event. For example, a tap gesture recognizer takes information about a
@@ -725,27 +400,26 @@ var sigFigs = 100;
 
   Gesture events follow the format:
 
-    * [GESTURE_NAME]Start - Sent when a gesture has gathered enough information
+    * *[GESTURE_NAME]* Start - Sent when a gesture has gathered enough information
         to begin tracking the gesture
 
-    * [GESTURE_NAME]Change - Sent when a gesture has already started and has
+    * *[GESTURE_NAME]* Change - Sent when a gesture has already started and has
         received touchmove events that cause its state to change
 
-    * [GESTURE_NAME]End - Sent when a touchend event is received and the gesture
+    * *[GESTURE_NAME]* End - Sent when a touchend event is received and the gesture
         recognizer decides that the gesture is finished.
 
-    * [GESTURE_NAME]Cancel - Sent when a touchcancel event is received.
+    * *[GESTURE_NAME]* Cancel - Sent when a touchcancel event is received.
 
-  There are two types of gesturess: Discrete and Continuous gestures. In contrast
+  There are two types of gestures: Discrete and Continuous gestures. In contrast
   to continuous gestures, discrete gestures don't have any change events. Rather,
-  the start and end events are the only one that gets sent.
+  the end event is the only one that gets sent to the view.
 
-  Usage
-  =======
+  ## Usage
 
-  While you wouldn't use SC.Gesture directly, all its subclasses have the same
-  API. For example, to implement pinch on a view, you implement pinchChange and
-  optionally pinchStart, pinchEnd and pinchCancel.
+  While you wouldn't use SC.Gesture directly, all its subclasses implement the 
+  same API. For example, to implement pinch on a view, you implement one or more 
+  of the pinch events. For example:
 
       var myView = SC.View.create({
         pinchStart: function(recognizer) {
@@ -754,7 +428,9 @@ var sigFigs = 100;
 
         pinchChange: function(recognizer) {
           var scale = recognizer.get('scale');
-          this.$().css('-webkit-transform','scale3d('+scale+','+scale+',1)');
+          this.$().css('scale',function(index, value) {
+            return recognizer.get('scale') * value
+          });
         },
 
         pinchEnd: function(recognizer) {
@@ -770,8 +446,21 @@ var sigFigs = 100;
   gesture, but pinchChange() will get called repeatedly called every time
   one of the touches moves.
 
-  Creating Custom Gesture Recognizers
-  ======
+  ## Customizing Gesture Recognizers
+
+  Some of the gesture recognizers include properties that can be customized by 
+  the user for a specific instance of a view. For example, a pan gesture defaults 
+  to being a one-finger gesture, but in some scenarios, it must be defined as a 
+  two-finger gesture. In that case, you can override defaults by specifying an 
+  Options hash. 
+
+      var myView = SC.View.create({
+        panOptions: {
+          numberOfRequiredTouches: 2
+        }
+      });      
+
+  ## Creating Custom Gesture Recognizers
 
   SC.Gesture also defines an API which its subclasses can implement to build
   custom gestures. The methods are:
@@ -805,26 +494,22 @@ var sigFigs = 100;
 
   In all the callbacks, you can use the `touches` protected property to access the
   touches hash. The touches hash is keyed on the identifiers of the touches, and the
-  values are the jQuery.Event objects.
-
-  You can also use the numberOfActiveTouches property to inspect how many touches
-  are active, this is mostly useful in shouldBegin since every other callback can
-  assume that there are as many active touches as specified in the 
+  values are the jQuery.Event objects. You can also access the length property to inspect 
+  how many touches are active, this is mostly useful in shouldBegin since every other 
+  callback can assume that there are as many active touches as specified in the 
   numberOfRequiredTouches property.
 
-  Discrete vs Continuous Gestures
-  =======
+  ## Discrete vs Continuous Gestures
 
   There are two main classes of gesture recognizers: Discrete and Continuous 
-  gestures. Discrete gestures do not get Change events sent, since they represent
-  a single, instantaneous event, rather than a continuous motion. If you are 
-  implementing your own discrete gesture recognizer, you must set the 
-  isDiscreteGesture property to yes, and SC.Gesture will adapt its behavior.
+  gestures. Discrete gestures do not get Start, Change nor Cancel events sent, 
+  since they represent a single, instantaneous event, rather than a continuous 
+  motion. If you are implementing your own discrete gesture recognizer, you must 
+  set the isDiscreteGesture property to yes, and SC.Gesture will adapt its behavior.
 
   Discrete gestures use the shouldEnd callback to either accept or decline the gesture
-  event. If it is delined, then the gesture will enter a Cancelled state and trigger
-  the Cancel event on the view.
-
+  event. If it is declined, then the gesture will enter a Cancelled state.
+  
   @extends SC.Object
 */
 
@@ -925,10 +610,14 @@ SC.Gesture = SC.Object.extend(
   // Utilities
 
   /** @private */
-  attemptGestureEventDelivery: function(evt, view, eventName) {
+  attemptGestureEventDelivery: function(evt, view, eventName, stopPropagation) {
+    if (stopPropagation === undefined) {
+      var stopPropagation = true;
+    }
+
     if (this.notifyViewOfGestureEvent(view, eventName) === false) {
       this.eventWasRejected();
-    } else {
+    } else if(stopPropagation) {
       evt.preventDefault();
     }
   },
@@ -1045,7 +734,6 @@ SC.Gesture = SC.Object.extend(
       if (get(this, 'gestureIsDiscrete') && this.shouldBegin()) {
         set(this, 'state', SC.Gesture.BEGAN);
         this.didBegin();
-        this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'Start');
       } else {
         set(this, 'state', SC.Gesture.POSSIBLE);
         this.didBecomePossible();
@@ -1085,7 +773,7 @@ SC.Gesture = SC.Object.extend(
         // updated information in the Start event
         this.didChange();
 
-        this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'Start');
+        this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'Start',(this.get('isDiscreteGesture'))? true: false);
       }
 
     // Discrete gestures don't fire changed events
@@ -1117,7 +805,7 @@ SC.Gesture = SC.Object.extend(
       } 
     } 
     else {
-      if (this.state !== SC.Gesture.ENDED && this.shouldEnd()) {
+      if ((this.state === SC.Gesture.BEGAN || this.state === SC.Gesture.CHANGED) && this.shouldEnd()) {
         set(this, 'state', SC.Gesture.ENDED);
         this.didEnd();
 
@@ -1175,9 +863,11 @@ var sigFigs = 100;
 
     var myview = SC.View.create({
       elementId: 'gestureTest',
-      pinchChange: function(recognizer) {
-        var scale = recognizer.get('scale');
-        this.$().css('-webkit-transform','scale3d('+scale+','+scale+',1)');
+      
+      pinchChange: function(rec) {
+        this.$().css('scale',function(index, value) {
+          return rec.get('scale') * value
+        });
       }
     })
 
@@ -1313,9 +1003,13 @@ var x = 0;
 
     var myview = SC.View.create({
       elementId: 'gestureTest',
-      panChange: function(recognizer) {
-        var translation = recognizer.get('translation');
-        this.$().css('-webkit-transform','translate3d('+translate.x+'px,'+translate.y+'px,0)');
+      
+      panChange: function(rec) {
+        var val = rec.get('translation');
+        this.$().css({
+          translateX: '%@=%@'.fmt((val.x < 0)? '-' : '+',Math.abs(val.x)),
+          translateY: '%@=%@'.fmt((val.y < 0)? '-' : '+',Math.abs(val.y))
+        });
       }
     })
 
@@ -1429,13 +1123,10 @@ var set = SC.set;
 
   Recognizes a multi-touch tap gesture. Tap gestures allow for a certain amount
   of wiggle-room between a start and end of a touch. Taps are discrete gestures
-  so only tapStart() and tapEnd() will get fired on a view.
+  so only tapEnd() will get fired on a view.
 
     var myview = SC.View.create({
       elementId: 'gestureTest',
-      tapStart: function(recognizer) {
-        $('#gestureTest').css('background','green');
-      },
 
       tapEnd: function(recognizer) {
         $('#gestureTest').css('background','yellow');
@@ -1446,8 +1137,8 @@ var set = SC.set;
   property, which you can set in the panOptions hash:
 
     var myview = SC.View.create({
-      panOptions: {
-        numberOfRequiredTouches: 3
+      tapOptions: {
+        numberOfTaps: 3
       }
       ...
     })
