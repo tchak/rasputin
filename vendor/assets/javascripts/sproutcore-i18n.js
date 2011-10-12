@@ -1,5 +1,3 @@
-//= require sproutcore
-
 (function() {
 
 SC.I18n = I18n;

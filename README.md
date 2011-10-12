@@ -74,6 +74,11 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 ChangeLog
 ----------
 
+0.10.0
+
+* add sproutcore-routing
+* bump sproutcore to master (with metamorph)
+
 0.9.1
 
 * you can change templates naming scheme in your configuration

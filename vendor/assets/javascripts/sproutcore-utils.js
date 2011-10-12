@@ -1,5 +1,3 @@
-//= require sproutcore
-
 (function(exports) {
 // ==========================================================================
 // Project:   SproutCore

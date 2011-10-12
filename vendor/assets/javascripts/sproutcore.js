@@ -1,4 +1,3 @@
-//=require jquery
 //=require metamorph
 
 (function(exports) {
@@ -13033,7 +13032,9 @@ SC.MetamorphView = SC.View.extend({
       var buffer = view.renderToBuffer();
 
       SC.run.schedule('render', this, function() {
-        morph.replaceWith(buffer.string());
+        // FIXME: patch metamorph
+        morph.html(buffer.string());
+        //morph.replaceWith(buffer.string());
         view.transitionTo('inDOM');
       });
     }

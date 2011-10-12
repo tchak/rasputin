@@ -1,4 +1,3 @@
-//=require sproutcore
 //=require TransformJS
 
 (function(exports) {
@@ -1302,20 +1301,5 @@ SC.View.reopen(
 
 });
 
-
 })({});
 
-
-(function(exports) {
-
-
-
-
-})({});
-
-
-(function(exports) {
-
-
-
-})({});
