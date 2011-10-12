@@ -9,6 +9,7 @@ It provide direct requires for official sproutcore packages :
 * sproutcore-datastore
 * sproutcore-statechart
 * sproutcore-touch
+* sproutcore-routing
 
 And it also provides one unnoficial package :
 
@@ -56,6 +57,7 @@ In Gemfile:
 
 In your javascript asset manifest (app/assets/javascripts/application.js) add the following:
 
+    //= require jquery
     //= require sproutcore
     
 And any of the following you want to include:
@@ -63,6 +65,7 @@ And any of the following you want to include:
     //= require sproutcore-datastore
     //= require sproutcore-statechart
     //= require sproutcore-touch
+    //= require sproutcore-routing
     //= require sproutcore-i18n
 
 In your stylesheet asset manifest (app/assets/stylesheets/application.css) add the following:
@@ -77,7 +80,7 @@ ChangeLog
 0.10.0
 
 * add sproutcore-routing
-* bump sproutcore to master (with metamorph)
+* update sproutcore to master (with metamorph)
 
 0.9.1
 
