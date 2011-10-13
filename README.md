@@ -77,6 +77,10 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 ChangeLog
 ----------
 
+0.10.1
+
+* update with built in metamorph
+
 0.10.0
 
 * add sproutcore-routing
