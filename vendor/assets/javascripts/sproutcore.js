@@ -13557,13 +13557,6 @@ SC._BindableSpanView = SC.View.extend(SC.Metamorph,
     }
 
     return this._super(buffer);
-  },
-
-  destroy: function() {
-    var removeObserver = get(this, 'removeObserver');
-    removeObserver();
-
-    this._super();
   }
 });
 
@@ -13613,15 +13606,15 @@ var get = SC.get, getPath = SC.getPath, set = SC.set, fmt = SC.String.fmt;
         });
       };
 
-      set(bindView, 'removeObserver', function() {
-        SC.removeObserver(ctx, property, observer);
-      });
-
       // Observes the given property on the context and
       // tells the SC._BindableSpan to re-render. If property
       // is an empty string, we are printing the current context
       // object ({{this}}) so updating it is not our responsibility.
       if (property !== '') {
+        set(bindView, 'removeObserver', function() {
+          SC.removeObserver(ctx, property, observer);
+        });
+
         SC.addObserver(ctx, property, observer);
       }
     } else {
