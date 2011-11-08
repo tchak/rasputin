@@ -11917,7 +11917,7 @@ SC.View.childViewsProperty = childViewsProperty;
 var get = SC.get, set = SC.set;
 
 SC.View.states = {
-  "default": {
+  _default: {
     // appendChild is only legal while rendering the buffer.
     appendChild: function() {
       throw "You can't use appendChild outside of the rendering process";
@@ -11948,7 +11948,7 @@ SC.View.reopen({
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 SC.View.states.preRender = {
-  parentState: SC.View.states.default,
+  parentState: SC.View.states._default,
 
   // a view leaves the preRender state once its element has been
   // created (createElement).
@@ -11992,7 +11992,7 @@ SC.View.states.preRender = {
 var get = SC.get, set = SC.set, meta = SC.meta;
 
 SC.View.states.inBuffer = {
-  parentState: SC.View.states.default,
+  parentState: SC.View.states._default,
 
   $: function(view, sel) {
     // if we don't have an element yet, someone calling this.$() is
@@ -12069,7 +12069,7 @@ SC.View.states.inBuffer = {
 var get = SC.get, set = SC.set, meta = SC.meta;
 
 SC.View.states.hasElement = {
-  parentState: SC.View.states.default,
+  parentState: SC.View.states._default,
 
   $: function(view, sel) {
     var elem = get(view, 'element');
@@ -12137,7 +12137,7 @@ SC.View.states.inDOM = {
 var destroyedError = "You can't call %@ on a destroyed view", fmt = SC.String.fmt;
 
 SC.View.states.destroyed = {
-  parentState: SC.View.states.default,
+  parentState: SC.View.states._default,
 
   appendChild: function() {
     throw fmt(destroyedError, ['appendChild']);
