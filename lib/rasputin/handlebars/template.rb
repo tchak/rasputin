@@ -9,7 +9,7 @@ module Rasputin
     def evaluate(scope, locals, &block)
       if Rails.configuration.rasputin.precompile_handlebars
         func = Rasputin::Handlebars.compile(data)
-        "SC.TEMPLATES[#{template_path(scope.logical_path).inspect}] = Handlebars.template(#{func});"
+        "SC.TEMPLATES[#{template_path(scope.logical_path).inspect}] = SC.Handlebars.template(#{func});"
       else
         "SC.TEMPLATES[#{template_path(scope.logical_path).inspect}] = SC.Handlebars.compile(#{indent(data).inspect});"
       end
