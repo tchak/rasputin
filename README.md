@@ -62,7 +62,9 @@ In your javascript asset manifest (app/assets/javascripts/application.js) add th
     
 And any of the following you want to include:
 
+    //= require sproutcore-datetime
     //= require sproutcore-datastore
+    //= require sproutcore-utils
     //= require sproutcore-statechart
     //= require sproutcore-touch
     //= require sproutcore-routing
@@ -76,6 +78,11 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.10.3
+
+* update sproutcore to latest master
+* update Handlebars compiler (thank's to @MichaelRykov)
 
 0.10.1
 
