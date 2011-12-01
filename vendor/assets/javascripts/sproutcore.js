@@ -10203,14 +10203,14 @@ SC._RenderBuffer = SC.Object.extend(
     @returns {SC.RenderBuffer} this
   */
   addClass: function(className) {
-    get(this, 'elementClasses').pushObject(className);
+    get(this, 'elementClasses').addObject(className);
     return this;
   },
 
   /**
     Sets the elementID to be used for the element.
 
-    @param {Strign} id
+    @param {String} id
     @returns {SC.RenderBuffer} this
   */
   id: function(id) {
@@ -11113,6 +11113,9 @@ SC.View = SC.Object.extend(
         // If we had previously added a class to the element, remove it.
         if (oldClass) {
           elem.removeClass(oldClass);
+          // Also remove from classNames so that if the view gets rerendered,
+          // the class doesn't get added back to the DOM.
+          classNames.removeObject(oldClass);
         }
 
         // If necessary, add a new class. Make sure we keep track of it so
@@ -11637,7 +11640,7 @@ SC.View = SC.Object.extend(
     this._applyAttributeBindings(buffer);
 
 
-    buffer.addClass(get(this, 'classNames').join(' '));
+    get(this, 'classNames').forEach(function(name){ buffer.addClass(name); });
     buffer.id(get(this, 'elementId'));
 
     var role = get(this, 'ariaRole');
@@ -13264,7 +13267,7 @@ SC.TextSupport = SC.Mixin.create({
   },
 
   _elementValueDidChange: function() {
-    set(this, 'value', this.$().val() || null);
+    set(this, 'value', this.$().val() || '');
   }
 
 });
@@ -13324,12 +13327,13 @@ SC.Button = SC.View.extend(SC.TargetActionSupport, {
   attributeBindings: ['type', 'disabled'],
   type: 'button',
   disabled: false,
-
+  propagateEvents: false,
 
   mouseDown: function() {
     set(this, 'isActive', true);
     this._mouseDown = true;
     this._mouseEntered = true;
+    return this.get('propagateEvents');
   },
 
   mouseLeave: function() {
@@ -13357,6 +13361,7 @@ SC.Button = SC.View.extend(SC.TargetActionSupport, {
 
     this._mouseDown = false;
     this._mouseEntered = false;
+    return this.get('propagateEvents');
   },
 
   // TODO: Handle proper touch behavior.  Including should make inactive when
