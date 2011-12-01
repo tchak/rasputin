@@ -1,11 +1,10 @@
+(function() {
 // ==========================================================================
 // Project:   SproutCore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-require('sproutcore-runtime');
 
 var get = SC.get, set = SC.set;
 
@@ -405,7 +404,7 @@ SC.DateTime = SC.Object.extend(SC.Freezable, SC.Copyable,
     @returns {Boolean}
   */
   isEqual: function(aDateTime) {
-    return SC.DateTime.compare(this, aDateTime) === 0;
+    return this.constructor.compare(this, aDateTime) === 0;
   },
 
   /**
@@ -1013,13 +1012,13 @@ SC.DateTime.reopenClass(SC.Comparable,
        if ( opts.month === 2 && opts.day > 29 ){
          return null;
        }
-       if ([4,6,9,11].contains(opts.month) && opts.day > 30) {
+       if (jQuery.inArray(opts.month, [4,6,9,11]) > -1 && opts.day > 30) {
          return null;
        }
      }
    }
 
-    d = SC.DateTime.create(opts);
+    d = this.create(opts);
 
     if (!SC.none(check.dayOfWeek) && get(d,'dayOfWeek') !== check.dayOfWeek) {
       return null;
@@ -1175,3 +1174,13 @@ SC.Binding.dateTime = function(format) {
   });
 };
 
+
+})();
+(function() {
+// ==========================================================================
+// Project:   SproutCore DateTime
+// Copyright: ©2010 Strobe Inc. and contributors
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+
+})();
