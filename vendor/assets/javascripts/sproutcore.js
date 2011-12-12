@@ -1710,7 +1710,7 @@ if ('undefined' === typeof require) require = SC.K;
   Inside SproutCore-Metal, simply uses the window.console object.
   Override this to provide more robust logging functionality.
 */
-SC.Logger = window.console;
+SC.Logger = window.console || { log: SC.K, warn: SC.K, error: SC.K };
 
 })({});
 
@@ -2350,7 +2350,7 @@ function getPath(target, path) {
   var len = path.length, idx, next, key;
   
   idx = path.indexOf('*');
-  if (idx>0 && path[idx-1]!=='.') {
+  if (idx>0 && path.charAt(idx-1)!=='.') {
     return getPath(getPath(target, path.slice(0, idx)), path.slice(idx+1));
   }
 
@@ -5983,11 +5983,12 @@ function findNamespaces() {
   if (Namespace.PROCESSED) { return; }
 
   for (var prop in window) {
-    if (!window.hasOwnProperty(prop)) { continue; }
+    // Unfortunately, some versions of IE don't support window.hasOwnProperty
+    if (window.hasOwnProperty && !window.hasOwnProperty(prop)) { continue; }
 
     obj = window[prop];
 
-    if (obj instanceof Namespace) {
+    if (obj && obj instanceof Namespace) {
       obj[NAME_KEY] = prop;
     }
   }
@@ -8145,7 +8146,7 @@ t.forEach(function(name) {
 var toString = Object.prototype.toString;
 
 /**
-  Returns a consistant type for the passed item.
+  Returns a consistent type for the passed item.
 
   Use this instead of the built-in SC.typeOf() to get the type of an item.
   It will return the same result across all browsers and includes a bit
@@ -8160,9 +8161,9 @@ var toString = Object.prototype.toString;
   | 'function' | A function |
   | 'array' | An instance of Array |
   | 'class' | A SproutCore class (created using SC.Object.extend()) |
-  | 'object' | A SproutCore object instance |
+  | 'instance' | A SproutCore object instance |
   | 'error' | An instance of the Error object |
-  | 'hash' | A JavaScript object not inheriting from SC.Object |
+  | 'object' | A JavaScript object not inheriting from SC.Object |
 
   @param item {Object} the item to check
   @returns {String} the type
@@ -8684,7 +8685,7 @@ SC.Copyable = SC.Mixin.create({
     if (SC.Freezable && SC.Freezable.detect(this)) {
       return get(this, 'isFrozen') ? this : this.copy().freeze();
     } else {
-      throw new Error(SC.String.fmt("%@ does not support freezing",this));
+      throw new Error(SC.String.fmt("%@ does not support freezing", [this]));
     }
   }
 });
@@ -10672,6 +10673,7 @@ SC.Application = SC.Namespace.extend(
   init: function() {
     var eventDispatcher,
         rootElement = get(this, 'rootElement');
+    this._super();
 
     eventDispatcher = SC.EventDispatcher.create({
       rootElement: rootElement
@@ -10683,6 +10685,8 @@ SC.Application = SC.Namespace.extend(
     SC.$(document).ready(function() {
       self.ready();
     });
+
+    this._super();
   },
 
   ready: function() {
@@ -10836,7 +10840,7 @@ SC.View = SC.Object.extend(
       }
 
       if (!template) {
-        throw new SC.Error(fmt('%@ - Unable to find template "%@".', this, templateName));
+        throw new SC.Error(fmt('%@ - Unable to find template "%@".', [this, templateName]));
       }
     }
 
@@ -11205,8 +11209,9 @@ SC.View = SC.Object.extend(
     passing `isUrgent` to this method will return `"is-urgent"`.
   */
   _classStringForProperty: function(property) {
-    var split = property.split(':'), className = split[1];
-    property = split[0];
+    var split = property.split(':'),
+        property = split[0],
+        className = split[1];
 
     var val = SC.getPath(this, property);
 
@@ -11218,7 +11223,7 @@ SC.View = SC.Object.extend(
       // Normalize property path to be suitable for use
       // as a class name. For exaple, content.foo.barBaz
       // becomes bar-baz.
-      parts = property.split('.');
+      var parts = property.split('.');
       return SC.String.dasherize(parts[parts.length-1]);
 
     // If the value is not NO, undefined, or null, return the current
@@ -11900,10 +11905,9 @@ SC.View = SC.Object.extend(
   createChildView: function(view, attrs) {
     if (SC.View.detect(view)) {
       view = view.create(attrs || {}, { _parentView: this });
-      
-      if (attrs && attrs.viewName) {
-        set(this, attrs.viewName, view);
-      }
+
+      var viewName = attrs && attrs.viewName || view.viewName;
+      if (viewName) { set(this, viewName, view); }
     } else {
       sc_assert('must pass instance of View', view instanceof SC.View);
       set(view, '_parentView', this);
@@ -12492,7 +12496,7 @@ SC.ContainerView.states = {
       // If the DOM element for this container view already exists,
       // schedule each child view to insert its DOM representation after
       // bindings have finished syncing.
-      prev = start === 0 ? null : views[start-1];
+      var prev = start === 0 ? null : views[start-1];
 
       for (var i=start; i<start+added; i++) {
         view = views[i];
@@ -12720,6 +12724,225 @@ SC.$ = jQuery;
 })({});
 
 (function(exports) {
+var get = SC.get, set = SC.set;
+
+SC.State = SC.Object.extend({
+  isState: true,
+  parentState: null,
+  start: null,
+
+  init: function() {
+    SC.keys(this).forEach(function(name) {
+      var value = this[name];
+
+      if (value && value.isState) {
+        set(value, 'parentState', this);
+        set(value, 'name', (get(this, 'name') || '') + '.' + name);
+      }
+    }, this);
+  },
+
+  enter: SC.K,
+  exit: SC.K
+});
+
+})({});
+
+
+(function(exports) {
+var get = SC.get, set = SC.set, getPath = SC.getPath, fmt = SC.String.fmt;
+SC.LOG_STATE_TRANSITIONS = false;
+
+SC.StateManager = SC.State.extend({
+  /**
+    When creating a new storyboard, look for a default state to transition
+    into. This state can either be named `start`, or can be specified using the
+    `initialState` property.
+  */
+  init: function() {
+    this._super();
+
+    var states = get(this, 'states');
+    if (!states) {
+      states = {};
+      SC.keys(this).forEach(function(name) {
+        var value = get(this, name);
+
+        if (value && value.isState) {
+          states[name] = value;
+        }
+      }, this);
+
+      set(this, 'states', states);
+    }
+
+    var initialState = get(this, 'initialState');
+
+    if (!initialState && get(this, 'start')) {
+      initialState = 'start';
+    }
+
+    if (initialState) {
+      this.goToState(initialState);
+    }
+  },
+
+  currentState: null,
+
+  send: function(event, context) {
+    this.sendRecursively(event, get(this, 'currentState'), context);
+  },
+
+  sendRecursively: function(event, currentState, context) {
+    var log = SC.LOG_STATE_TRANSITIONS;
+
+    var action = currentState[event];
+
+    if (action) {
+      if (log) { console.log(fmt("STORYBOARDS: Sending event '%@' to state %@.", [event, currentState.name])); }
+      action.call(currentState, this, context);
+    } else {
+      var parentState = get(currentState, 'parentState');
+      if (parentState) { this.sendRecursively(event, parentState, context); }
+    }
+  },
+
+  goToState: function(name) {
+    var currentState = get(this, 'currentState') || this, state, newState;
+
+    var exitStates = SC.A();
+
+    newState = getPath(currentState, name);
+    state = currentState;
+
+    if (!newState) {
+      while (state && !newState) {
+        exitStates[SC.guidFor(state)] = state;
+        exitStates.push(state)
+
+        state = get(state, 'parentState')
+        if (!state) {
+          state = get(this, 'states');
+        }
+        newState = getPath(state, name);
+      }
+    }
+
+    this.enterState(state, name, exitStates);
+  },
+
+  getState: function(name) {
+    var state = get(this, name),
+        parentState = get(this, 'parentState');
+
+    if (state) {
+      return state;
+    } else if (parentState) {
+      return parentState.getState(name);
+    }
+  },
+
+  asyncEach: function(list, callback, doneCallback) {
+    var async = false, self = this;
+
+    if (!list.length) {
+      if (doneCallback) { doneCallback.call(this); }
+      return;
+    }
+
+    var head = list[0];
+    var tail = list.slice(1);
+
+    var transition = {
+      async: function() { async = true; },
+      resume: function() {
+        self.asyncEach(tail, callback, doneCallback);
+      }
+    }
+
+    callback.call(this, head, transition);
+
+    if (!async) { transition.resume(); }
+  },
+
+  enterState: function(parent, name, exitStates) {
+    var log = SC.LOG_STATE_TRANSITIONS;
+
+    var parts = name.split("."), state = parent, enterStates = SC.A();
+
+    parts.forEach(function(name) {
+      state = state[name];
+
+      var guid = SC.guidFor(state);
+
+      if (guid in exitStates) {
+        exitStates.removeObject(state);
+        delete exitStates[guid];
+      } else {
+        enterStates.push(state);
+      }
+    });
+
+    var stateManager = this;
+
+    this.asyncEach(exitStates, function(state, transition) {
+      state.exit(stateManager, transition);
+    }, function() {
+      this.asyncEach(enterStates, function(state, transition) {
+        if (log) { console.log("STORYBOARDS: Entering " + state.name); }
+        state.enter(stateManager, transition);
+      }, function() {
+        var startState = state, enteredState;
+
+        // right now, start states cannot be entered asynchronously
+        while (startState = get(startState, 'start')) {
+          enteredState = startState;
+          startState.enter(stateManager);
+        }
+
+        set(this, 'currentState', enteredState || state);
+      });
+    });
+  }
+});
+
+})({});
+
+
+(function(exports) {
+var get = SC.get, set = SC.set;
+
+SC.ViewState = SC.State.extend({
+  enter: function(stateManager) {
+    var view = get(this, 'view');
+
+    if (view) {
+      view.appendTo(stateManager.get('rootElement') || 'body');
+    }
+  },
+
+  exit: function(stateManager) {
+    var view = get(this, 'view');
+
+    if (view) {
+      view.remove();
+    }
+  }
+});
+
+
+})({});
+
+
+(function(exports) {
+// ==========================================================================
+// Project:  SproutCore Storyboards
+// Copyright: ©2011 Living Social Inc. and contributors.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+})({});
+
+(function(exports) {
 // ==========================================================================
 // Project:   metamorph
 // Copyright: ©2011 My Company Inc. All rights reserved.
@@ -12729,9 +12952,20 @@ SC.$ = jQuery;
 
   var K = function(){},
       guid = 0,
+      document = window.document,
 
-      // Feature-detect the W3C range API
-      supportsRange = ('createRange' in document);
+      // Feature-detect the W3C range API, the extended check is for IE9 which only partially supports ranges
+      supportsRange = ('createRange' in document) && (typeof Range !== 'undefined') && Range.prototype.createContextualFragment,
+
+      // Internet Explorer prior to 9 does not allow setting innerHTML if the first element
+      // is a "zero-scope" element. This problem can be worked around by making
+      // the first node an invisible text node. We, like Modernizr, use &shy;
+      needsShy = (function(){
+        var testEl = document.createElement('div');
+        testEl.innerHTML = "<div></div>";
+        testEl.firstChild.innerHTML = "<script></script>";
+        return testEl.firstChild.innerHTML === '';
+      })();
 
   // Constructor that supports either Metamorph('foo') or new
   // Metamorph('foo');
@@ -12744,7 +12978,7 @@ SC.$ = jQuery;
     if (this instanceof Metamorph) {
       self = this;
     } else {
-      self = new K;
+      self = new K();
     }
 
     self.innerHTML = html;
@@ -12759,8 +12993,6 @@ SC.$ = jQuery;
 
   var rangeFor, htmlFunc, removeFunc, outerHTMLFunc, appendToFunc, startTagFunc, endTagFunc;
 
-  // create the outer HTML for the current metamorph. this function will be
-  // extended by the Internet Explorer version to work around a bug.
   outerHTMLFunc = function() {
     return this.startTag() + this.innerHTML + this.endTag();
   };
@@ -12775,6 +13007,17 @@ SC.$ = jQuery;
 
   // If we have the W3C range API, this process is relatively straight forward.
   if (supportsRange) {
+
+    // IE 9 supports ranges but doesn't define createContextualFragment
+    if (!Range.prototype.createContextualFragment) {
+      Range.prototype.createContextualFragment = function(html) {
+        var frag = document.createDocumentFragment(),
+             div = document.createElement("div");
+        frag.appendChild(div);
+        div.outerHTML = html;
+        return frag;
+      };
+    }
 
     // Get a range for the current morph. Optionally include the starting and
     // ending placeholders.
@@ -12851,30 +13094,36 @@ SC.$ = jQuery;
      *
      * We need to do this because innerHTML in IE does not really parse the nodes.
      **/
-    function firstNodeFor(parentNode, html) {
+    var firstNodeFor = function(parentNode, html) {
       var arr = wrapMap[parentNode.tagName.toLowerCase()] || wrapMap._default;
-        var depth = arr[0], start = arr[1], end = arr[2];
+      var depth = arr[0], start = arr[1], end = arr[2];
 
-        var element = document.createElement('div');
+      if (needsShy) { html = '&shy;'+html; }
+
+      var element = document.createElement('div');
       element.innerHTML = start + html + end;
 
       for (var i=0; i<=depth; i++) {
         element = element.firstChild;
       }
 
+      // Look for &shy; to remove it.
+      if (needsShy) {
+        var shyElement = element;
+
+        // Sometimes we get nameless elements with the shy inside
+        while (shyElement.nodeType === 1 && !shyElement.nodeName && shyElement.childNodes.length === 1) {
+          shyElement = shyElement.firstChild;
+        }
+
+        // At this point it's the actual unicode character.
+        if (shyElement.nodeType === 3 && shyElement.nodeValue.charAt(0) === "\u00AD") {
+          shyElement.nodeValue = shyElement.nodeValue.slice(1);
+        }
+      }
+
       return element;
-    }
-
-    /**
-     * Internet Explorer does not allow setting innerHTML if the first element
-     * is a "zero-scope" element. This problem can be worked around by making
-     * the first node an invisible text node. We, like Modernizr, use &shy;
-     **/
-    var startTagFuncWithoutShy = startTagFunc;
-
-    startTagFunc = function() {
-      return "&shy;" + startTagFuncWithoutShy.call(this);
-    }
+    };
 
     /**
      * In some cases, Internet Explorer can create an anonymous node in
@@ -12888,7 +13137,7 @@ SC.$ = jQuery;
      * node and use *it* as the marker.
      **/
     var realNode = function(start) {
-      while (start.parentNode.tagName == "") {
+      while (start.parentNode.tagName === "") {
         start = start.parentNode;
       }
 
@@ -12934,17 +13183,15 @@ SC.$ = jQuery;
       var start = realNode(document.getElementById(this.start));
       var end = document.getElementById(this.end);
       var parentNode = end.parentNode;
-      var nextSibling, last;
+      var node, nextSibling, last;
 
       // make sure that the start and end nodes share the same
       // parent. If not, fix it.
       fixParentage(start, end);
 
-      var node = start;
-      if (!outerToo) { node = node.nextSibling; }
-
       // remove all of the nodes after the starting placeholder and
       // before the ending placeholder.
+      node = start.nextSibling;
       while (node) {
         nextSibling = node.nextSibling;
         last = node === end;
@@ -13330,10 +13577,12 @@ SC.Button = SC.View.extend(SC.TargetActionSupport, {
   propagateEvents: false,
 
   mouseDown: function() {
-    set(this, 'isActive', true);
-    this._mouseDown = true;
-    this._mouseEntered = true;
-    return this.get('propagateEvents');
+    if (!get(this, 'disabled')) {
+      set(this, 'isActive', true);
+      this._mouseDown = true;
+      this._mouseEntered = true;
+    }
+    return get(this, 'propagateEvents');
   },
 
   mouseLeave: function() {
@@ -13361,7 +13610,7 @@ SC.Button = SC.View.extend(SC.TargetActionSupport, {
 
     this._mouseDown = false;
     this._mouseEntered = false;
-    return this.get('propagateEvents');
+    return get(this, 'propagateEvents');
   },
 
   // TODO: Handle proper touch behavior.  Including should make inactive when
@@ -13964,11 +14213,17 @@ SC.Handlebars.bindClasses = function(context, classBindings, view, id) {
   // determine which class string to return, based on whether it is
   // a Boolean or not.
   var classStringForProperty = function(property) {
+    var split = property.split(':'),
+        property = split[0],
+        className = split[1];
+
     var val = getPath(context, property);
 
     // If value is a Boolean and true, return the dasherized property
     // name.
     if (val === YES) {
+      if (className) { return className; }
+
       // Normalize property path to be suitable for use
       // as a class name. For exaple, content.foo.barBaz
       // becomes bar-baz.
@@ -13989,7 +14244,7 @@ SC.Handlebars.bindClasses = function(context, classBindings, view, id) {
 
   // For each property passed, loop through and setup
   // an observer.
-  classBindings.split(' ').forEach(function(property) {
+  classBindings.split(' ').forEach(function(binding) {
 
     // Variable in which the old class value is saved. The observer function
     // closes over this variable, so it knows which string to remove when
@@ -14002,13 +14257,13 @@ SC.Handlebars.bindClasses = function(context, classBindings, view, id) {
     // class name.
     observer = function() {
       // Get the current value of the property
-      newClass = classStringForProperty(property);
+      newClass = classStringForProperty(binding);
       elem = id ? view.$("[data-handlebars-id='" + id + "']") : view.$();
 
       // If we can't find the element anymore, a parent template has been
       // re-rendered and we've been nuked. Remove the observer.
       if (elem.length === 0) {
-        SC.removeObserver(context, property, invoker);
+        SC.removeObserver(context, binding, invoker);
       } else {
         // If we had previously added a class to the element, remove it.
         if (oldClass) {
@@ -14030,11 +14285,12 @@ SC.Handlebars.bindClasses = function(context, classBindings, view, id) {
       SC.run.once(observer);
     };
 
+    property = binding.split(':')[0];
     SC.addObserver(context, property, invoker);
 
     // We've already setup the observer; now we just need to figure out the 
     // correct behavior right now on the first pass through.
-    value = classStringForProperty(property);
+    value = classStringForProperty(binding);
 
     if (value) {
       ret.push(value);
