@@ -5,7 +5,7 @@
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals sc_assert */
+/*globals ember_assert */
 
 var get = Ember.get, set = Ember.set, abs = Math.abs;
 
@@ -1055,7 +1055,7 @@ Ember.IndexSet = Ember.Object.extend(Ember.Enumerable, Ember.MutableEnumerable, 
   */
   addObject: function(object, firstOnly) {
     var source  = get(this, 'source');
-    sc_assert("%@.addObject() requires source".fmt(this), !!source);
+    ember_assert("%@.addObject() requires source".fmt(this), !!source);
 
     var len = get(source, 'length'),
         cur = 0, idx;
@@ -1102,7 +1102,7 @@ Ember.IndexSet = Ember.Object.extend(Ember.Enumerable, Ember.MutableEnumerable, 
   */
   removeObject: function(object, firstOnly) {
     var source  = get(this, 'source');
-    sc_assert("%@.removeObject() requires source".fmt(this), !!source);
+    ember_assert("%@.removeObject() requires source".fmt(this), !!source);
 
     var len = source.get('length'),
         cur = 0, idx;
@@ -8274,7 +8274,7 @@ Ember.RecordArray.reopenClass(/** @scope Ember.RecordArray.prototype */{
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals sc_assert */
+/*globals ember_assert */
 
 
 
@@ -8415,9 +8415,9 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
     if (!newStoreClass) newStoreClass = Ember.NestedStore;
 
     // Ensure the passed-in class is a type of nested store.
-    sc_assert("%@ is a valid class".fmt(newStoreClass), 
+    ember_assert("%@ is a valid class".fmt(newStoreClass), 
       Ember.typeOf(newStoreClass) === 'class');
-    sc_assert("%@ is a type of Ember.NestedStore".fmt(newStoreClass),
+    ember_assert("%@ is a type of Ember.NestedStore".fmt(newStoreClass),
       Ember.NestedStore.detect(newStoreClass));
 
     // Replicate parent records references
@@ -9119,7 +9119,7 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
 
     // handle passing a query...
     if (id === undefined && !(recordType instanceof Ember.Record)) {
-      sc_assert('Ember.Store#find() accepts only a record type of query', 
+      ember_assert('Ember.Store#find() accepts only a record type of query', 
         Ember.Record.detect(recordType) || recordType instanceof Ember.Query);
 
       if (!(recordType instanceof Ember.Query)) {
@@ -11151,7 +11151,7 @@ Ember.Store.findAll = function(filter, recordType) {
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals sc_assert */
+/*globals ember_assert */
 
 var get = Ember.get, set = Ember.set;
 
@@ -11267,7 +11267,7 @@ Ember.NestedStore = Ember.Store.extend(
     @returns {Ember.Record|Ember.RecordArray}
   */
   find: function(query) {
-    sc_assert("Ember.Store#find() can only accept LOCAL queries in nested stores",
+    ember_assert("Ember.Store#find() can only accept LOCAL queries in nested stores",
       !query || !(query instanceof Ember.Query) || get(query, 'location') === Ember.Query.LOCAL);
     return this._super.apply(this, arguments);
   },
