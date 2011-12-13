@@ -1,28 +1,27 @@
 Rasputin
 ========
 
-This is a gem for integration of SproutCore 2.0 with Rails 3.1 assets pipeline.
+This is a gem for integration of Ember.js with Rails 3.1 assets pipeline.
 
-It provide direct requires for official sproutcore packages :
+It provide direct requires for official ember packages :
 
-* sproutcore
-* sproutcore-datastore
-* sproutcore-statechart
-* sproutcore-touch
-* sproutcore-routing
+* ember
+* ember-datastore
+* ember-touch
+* ember-routing
 
 And it also provides one unnoficial package :
 
-* sproutcore-i18n (integration with i18n-js gem)
+* ember-i18n (integration with i18n-js gem)
 
 Rasputin also provide sprockets engine for handlebars templates. Any template in your
 javascript assets folder with extention handlebars will be availabel in sproutcore.
 
 Examples :
 
-    todos/templates/item.handlebars >> SC.TEMPLATES['todos/item']
-    todos/ui/templates/stats.handlebars >> SC.TEMPLATES['todos/ui/stats']
-    todos/templates/collection.hbs >> SC.TEMPLATES['todos/collection']
+    todos/templates/item.handlebars >> Ember.TEMPLATES['todos/item']
+    todos/ui/templates/stats.handlebars >> Ember.TEMPLATES['todos/ui/stats']
+    todos/templates/collection.hbs >> Ember.TEMPLATES['todos/collection']
 
 If you want to keep using old naming scheme, put this in your rails configuration block :
     
@@ -40,12 +39,12 @@ If you do not want this behavior you can tourn it off in your rails configuratio
 If you use Slim templates, you can use handlebars filter :
 
     handlebars:
-        {{view SC.Button}}OK{{/view}}
+        {{view Ember.Button}}OK{{/view}}
 
 It will be translated as :
     
     <script type="text/x-handlebars">
-        {{view SC.Button}}OK{{/view}}
+        {{view Ember.Button}}OK{{/view}}
     </script>
 
 Install
@@ -58,17 +57,15 @@ In Gemfile:
 In your javascript asset manifest (app/assets/javascripts/application.js) add the following:
 
     //= require jquery
-    //= require sproutcore
+    //= require ember
     
 And any of the following you want to include:
 
-    //= require sproutcore-datetime
-    //= require sproutcore-datastore
-    //= require sproutcore-utils
-    //= require sproutcore-statechart
-    //= require sproutcore-touch
-    //= require sproutcore-routing
-    //= require sproutcore-i18n
+    //= require ember-datetime
+    //= require ember-datastore
+    //= require ember-touch
+    //= require ember-routing
+    //= require ember-i18n
 
 In your stylesheet asset manifest (app/assets/stylesheets/application.css) add the following:
 
@@ -78,6 +75,10 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.11.0
+
+* renaming to Ember.js
 
 0.10.3
 

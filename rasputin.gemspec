@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.authors     = ["Paul Chavard"]
   s.email       = ["paul@chavard.net"]
   s.homepage    = "http://github.com/tchak/rasputin"
-  s.summary     = %q{SproutCore 2.0 adapter for the Rails asset pipeline.}
-  s.description = %q{SproutCore 2.0 for the Rails asset pipeline.}
+  s.summary     = %q{Ember.js adapter for the Rails asset pipeline.}
+  s.description = %q{Ember.js for the Rails asset pipeline.}
 
   s.rubyforge_project = "rasputin"
   s.add_runtime_dependency 'railties', '~> 3.1.0'

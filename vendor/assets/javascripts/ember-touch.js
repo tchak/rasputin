@@ -1,30 +1,28 @@
-//=require TransformJS
-
 (function(exports) {
 // ==========================================================================
-// Project:  SproutCore Runtime
+// Project:  Ember Runtime
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 /**
   @class
 
   Registry of known gestures in the system. This is a singleton class, and is
-  used by SC.View to analyze instances of SC.View for gesture support.
+  used by Ember.View to analyze instances of Ember.View for gesture support.
 
   You will not use this class yourself. Rather, gesture recognizers will call
-  SC.Gestures.register(name, recognizer) when they want to make the system aware
+  Ember.Gestures.register(name, recognizer) when they want to make the system aware
   of them.
 
   @private
-  @extends SC.Object
+  @extends Ember.Object
 */
-SC.Gestures = SC.Object.create(
-/** @scope SC.Gestures.prototype */{
+Ember.Gestures = Ember.Object.create(
+/** @scope Ember.Gestures.prototype */{
 
   _registeredGestures: null,
 
@@ -38,11 +36,11 @@ SC.Gestures = SC.Object.create(
     Registers a gesture recognizer to the system. The gesture recognizer is
     identified by the name parameter, which must be globally unique.
   */
-  register: function(name, /** SC.Gesture */recognizer) {
+  register: function(name, recognizer) {
     var registeredGestures = this._registeredGestures;
 
     if (registeredGestures[name] !== undefined) {
-      throw new SC.Error(name+" already exists as a registered gesture recognizers. Gesture recognizers must have globally unique names.");
+      throw new Ember.Error(name+" already exists as a registered gesture recognizers. Gesture recognizers must have globally unique names.");
     }
 
     registeredGestures[name] = recognizer;
@@ -79,28 +77,28 @@ SC.Gestures = SC.Object.create(
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 /**
   @class
 
   Manages multiplegesture recognizers that are associated with a view.
-  This class is instantiated automatically by SC.View and you wouldn't
+  This class is instantiated automatically by Ember.View and you wouldn't
   interact with it yourself.
 
-  SC.GestureManager mainly acts as a composite for the multiple gesture
+  Ember.GestureManager mainly acts as a composite for the multiple gesture
   recognizers associated with a view. Whenever it gets a touch event, it
   relays it to the gestures. The other main resposibility of
-  SC.GestureManager is to handle re-dispatching of events to the view.
+  Ember.GestureManager is to handle re-dispatching of events to the view.
 
-  @extends SC.Object
+  @extends Ember.Object
 */
-SC.GestureManager = SC.Object.extend({
+Ember.GestureManager = Ember.Object.extend({
 
   /**
     An array containing all the gesture recognizers associated with a
-    view. This is set automatically by SC.View.
+    view. This is set automatically by Ember.View.
 
     @default null
     @type Array
@@ -120,7 +118,7 @@ SC.GestureManager = SC.Object.extend({
   _redispatchToNearestParentViewWaitingForTouches: function(evt, view) {
     var foundManager = null,
         successful = false;
-    var view = get(view, 'parentView');
+    view = get(view, 'parentView');
 
     while(view) {
       var manager = get(view, 'eventManager');
@@ -129,7 +127,7 @@ SC.GestureManager = SC.Object.extend({
         var gestures = get(manager, 'gestures');
 
         for (var i=0, l=gestures.length; i<l; i++) {
-          if (get(gestures[i], 'state') === SC.Gesture.WAITING_FOR_TOUCHES) {
+          if (get(gestures[i], 'state') === Ember.Gesture.WAITING_FOR_TOUCHES) {
             foundManager = manager;
           }
         }
@@ -208,10 +206,10 @@ SC.GestureManager = SC.Object.extend({
       gesture = gestures[i];
       handler = gesture[eventName];
 
-      if (SC.typeOf(handler) === 'function') {
+      if (Ember.typeOf(handler) === 'function') {
         result = handler.call(gesture, eventObject, view, this);
       }
-    };
+    }
 
     this._flushReDispatchQueue();
 
@@ -283,8 +281,8 @@ SC.GestureManager = SC.Object.extend({
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 /**
   @class
@@ -293,7 +291,7 @@ var set = SC.set;
   Used to manage and maintain a list of active touches related to a gesture 
   recognizer.
 */
-SC.TouchList = SC.Object.extend({
+Ember.TouchList = Ember.Object.extend({
   touches: null,
 
   timestamp: null,
@@ -376,8 +374,8 @@ SC.TouchList = SC.Object.extend({
 
 
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 var sigFigs = 100;
 
@@ -416,11 +414,11 @@ var sigFigs = 100;
 
   ## Usage
 
-  While you wouldn't use SC.Gesture directly, all its subclasses implement the 
+  While you wouldn't use Ember.Gesture directly, all its subclasses implement the 
   same API. For example, to implement pinch on a view, you implement one or more 
   of the pinch events. For example:
 
-      var myView = SC.View.create({
+      var myView = Ember.View.create({
         pinchStart: function(recognizer) {
           this.$().css('background','red');
         },
@@ -453,7 +451,7 @@ var sigFigs = 100;
   two-finger gesture. In that case, you can override defaults by specifying an 
   Options hash. 
 
-      var myView = SC.View.create({
+      var myView = Ember.View.create({
         panOptions: {
           numberOfRequiredTouches: 2
         }
@@ -461,7 +459,7 @@ var sigFigs = 100;
 
   ## Creating Custom Gesture Recognizers
 
-  SC.Gesture also defines an API which its subclasses can implement to build
+  Ember.Gesture also defines an API which its subclasses can implement to build
   custom gestures. The methods are:
 
     * **didBecomePossible** - Called when a gesture enters a possible state. This
@@ -504,16 +502,16 @@ var sigFigs = 100;
   gestures. Discrete gestures do not get Start, Change nor Cancel events sent, 
   since they represent a single, instantaneous event, rather than a continuous 
   motion. If you are implementing your own discrete gesture recognizer, you must 
-  set the isDiscreteGesture property to yes, and SC.Gesture will adapt its behavior.
+  set the isDiscreteGesture property to yes, and Ember.Gesture will adapt its behavior.
 
   Discrete gestures use the shouldEnd callback to either accept or decline the gesture
   event. If it is declined, then the gesture will enter a Cancelled state.
   
-  @extends SC.Object
+  @extends Ember.Object
 */
 
-SC.Gesture = SC.Object.extend(
-  /** @scope SC.Gesture.prototype */{
+Ember.Gesture = Ember.Object.extend(
+  /** @scope Ember.Gesture.prototype */{
 
   /**
     The current state of the gesture recognizer. This value can be any one
@@ -525,7 +523,7 @@ SC.Gesture = SC.Object.extend(
 
   /**
     A string of the gesture recognizer's name. This value is set automatically
-    but SC.Gestures when a gesture is registered.
+    but Ember.Gestures when a gesture is registered.
 
     @type String
   */
@@ -571,7 +569,7 @@ SC.Gesture = SC.Object.extend(
 
   init: function() {
     this._super();
-    this.touches = SC.TouchList.create();
+    this.touches = Ember.TouchList.create();
   },
 
   //..............................................
@@ -611,7 +609,7 @@ SC.Gesture = SC.Object.extend(
   /** @private */
   attemptGestureEventDelivery: function(evt, view, eventName, stopPropagation) {
     if (stopPropagation === undefined) {
-      var stopPropagation = true;
+      stopPropagation = true;
     }
 
     if (this.notifyViewOfGestureEvent(view, eventName) === false) {
@@ -689,7 +687,7 @@ SC.Gesture = SC.Object.extend(
     var handler = view[eventName];
     var result = true;
 
-    if (SC.typeOf(handler) === 'function') {
+    if (Ember.typeOf(handler) === 'function') {
       result = handler.call(view, this, data);
     }
 
@@ -697,7 +695,7 @@ SC.Gesture = SC.Object.extend(
   },
 
   toString: function() {
-    return SC.Gesture+'<'+SC.guidFor(this)+'>';
+    return Ember.Gesture+'<'+Ember.guidFor(this)+'>';
   },
 
   /** @private */
@@ -726,15 +724,15 @@ SC.Gesture = SC.Object.extend(
     }
 
     if (_touches.get('length') < get(this, 'numberOfRequiredTouches')) {
-      set(this ,'state', SC.Gesture.WAITING_FOR_TOUCHES);
+      set(this ,'state', Ember.Gesture.WAITING_FOR_TOUCHES);
 
     } else {
       // Discrete gestures may skip the possible step if they're ready to begin
       if (get(this, 'gestureIsDiscrete') && this.shouldBegin()) {
-        set(this, 'state', SC.Gesture.BEGAN);
+        set(this, 'state', Ember.Gesture.BEGAN);
         this.didBegin();
       } else {
-        set(this, 'state', SC.Gesture.POSSIBLE);
+        set(this, 'state', Ember.Gesture.POSSIBLE);
         this.didBecomePossible();
       }
     }
@@ -746,7 +744,7 @@ SC.Gesture = SC.Object.extend(
   touchMove: function(evt, view, manager) {
     var state = get(this, 'state');
 
-    if (state === SC.Gesture.WAITING_FOR_TOUCHES || state === SC.Gesture.ENDED || state === SC.Gesture.CANCELLED) {
+    if (state === Ember.Gesture.WAITING_FOR_TOUCHES || state === Ember.Gesture.ENDED || state === Ember.Gesture.CANCELLED) {
       // Nothing to do here
       manager.redispatchEventToView(view,'touchmove', evt);
       return;
@@ -763,9 +761,9 @@ SC.Gesture = SC.Object.extend(
       _touches.updateTouch(touch);
     }
 
-    if (state === SC.Gesture.POSSIBLE) {
+    if (state === Ember.Gesture.POSSIBLE) {
       if (this.shouldBegin()) {
-        set(this, 'state', SC.Gesture.BEGAN);
+        set(this, 'state', Ember.Gesture.BEGAN);
         this.didBegin();
 
         // Give the gesture a chance to update its state so the view can get 
@@ -776,8 +774,8 @@ SC.Gesture = SC.Object.extend(
       }
 
     // Discrete gestures don't fire changed events
-    } else if ((state === SC.Gesture.BEGAN || state === SC.Gesture.CHANGED) && !get(this, 'gestureIsDiscrete')) {
-      set(this, 'state', SC.Gesture.CHANGED);
+    } else if ((state === Ember.Gesture.BEGAN || state === Ember.Gesture.CHANGED) && !get(this, 'gestureIsDiscrete')) {
+      set(this, 'state', Ember.Gesture.CHANGED);
       this.didChange();
 
       this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'Change');
@@ -793,19 +791,19 @@ SC.Gesture = SC.Object.extend(
     if (get(this, 'gestureIsDiscrete')) {
 
       // Discrete gestures use shouldEnd to either accept or decline the gesture.
-      if (this.state === SC.Gesture.BEGAN && this.shouldEnd()) {
-        set(this, 'state', SC.Gesture.ENDED);
+      if (this.state === Ember.Gesture.BEGAN && this.shouldEnd()) {
+        set(this, 'state', Ember.Gesture.ENDED);
         this.didEnd();
         this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'End');
       } else {
-        set(this, 'state', SC.Gesture.CANCELLED);
+        set(this, 'state', Ember.Gesture.CANCELLED);
         this.didCancel();
         this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'Cancel');
       } 
     } 
     else {
-      if ((this.state === SC.Gesture.BEGAN || this.state === SC.Gesture.CHANGED) && this.shouldEnd()) {
-        set(this, 'state', SC.Gesture.ENDED);
+      if ((this.state === Ember.Gesture.BEGAN || this.state === Ember.Gesture.CHANGED) && this.shouldEnd()) {
+        set(this, 'state', Ember.Gesture.ENDED);
         this.didEnd();
 
         this.attemptGestureEventDelivery(evt, view, get(this, 'name')+'End');
@@ -819,9 +817,9 @@ SC.Gesture = SC.Object.extend(
 
   /** @private */
   touchCancel: function(evt, view, manager) {
-    if (this.state !== SC.Gesture.CANCELLED) {
+    if (this.state !== Ember.Gesture.CANCELLED) {
       this._resetState();
-      set(this, 'state', SC.Gesture.CANCELLED);
+      set(this, 'state', Ember.Gesture.CANCELLED);
       this.notifyViewOfGestureEvent(view,get(this, 'name')+'Cancel');
     } else {
       manager.redispatchEventToView(view,'touchcancel', evt);
@@ -829,12 +827,12 @@ SC.Gesture = SC.Object.extend(
   }
 });
 
-SC.Gesture.WAITING_FOR_TOUCHES = 0;
-SC.Gesture.POSSIBLE = 1;
-SC.Gesture.BEGAN = 2;
-SC.Gesture.CHANGED = 3;
-SC.Gesture.ENDED = 4;
-SC.Gesture.CANCELLED = 4;
+Ember.Gesture.WAITING_FOR_TOUCHES = 0;
+Ember.Gesture.POSSIBLE = 1;
+Ember.Gesture.BEGAN = 2;
+Ember.Gesture.CHANGED = 3;
+Ember.Gesture.ENDED = 4;
+Ember.Gesture.CANCELLED = 4;
 
 })({});
 
@@ -846,8 +844,8 @@ SC.Gesture.CANCELLED = 4;
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 var sigFigs = 100;
 
@@ -860,7 +858,7 @@ var sigFigs = 100;
   For pinchChange events, the pinch gesture recognizer includes a scale property
   which can be applied as a CSS transform directly.
 
-    var myview = SC.View.create({
+    var myview = Ember.View.create({
       elementId: 'gestureTest',
       
       pinchChange: function(rec) {
@@ -873,7 +871,7 @@ var sigFigs = 100;
   You can specify how many touches the gesture requires to start using the numberOfRequiredTouches
   property, which you can set in the pinchOptions hash:
 
-    var myview = SC.View.create({
+    var myview = Ember.View.create({
       pinchOptions: {
         numberOfRequiredTouches: 3
       }
@@ -881,9 +879,9 @@ var sigFigs = 100;
     })
 
 
-  @extends SC.Gesture
+  @extends Ember.Gesture
 */
-SC.PinchGestureRecognizer = SC.Gesture.extend({
+Ember.PinchGestureRecognizer = Ember.Gesture.extend({
 
   /**
     The scale value which represents the current amount of scaling that has been applied
@@ -973,7 +971,7 @@ SC.PinchGestureRecognizer = SC.Gesture.extend({
   }
 });
 
-SC.Gestures.register('pinch', SC.PinchGestureRecognizer);
+Ember.Gestures.register('pinch', Ember.PinchGestureRecognizer);
 
 })({});
 
@@ -985,8 +983,8 @@ SC.Gestures.register('pinch', SC.PinchGestureRecognizer);
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 var x = 0;
 
 /**
@@ -1000,7 +998,7 @@ var x = 0;
   which can be applied as a CSS transform directly. Translation values are hashes
   which contain an x and a y value.
 
-    var myview = SC.View.create({
+    var myview = Ember.View.create({
       elementId: 'gestureTest',
       
       panChange: function(rec) {
@@ -1015,16 +1013,16 @@ var x = 0;
   You can specify how many touches the gesture requires to start using the numberOfRequiredTouches
   property, which you can set in the panOptions hash:
 
-    var myview = SC.View.create({
+    var myview = Ember.View.create({
       panOptions: {
         numberOfRequiredTouches: 3
       }
       ...
     })
 
-  @extends SC.Gesture
+  @extends Ember.Gesture
 */
-SC.PanGestureRecognizer = SC.Gesture.extend({
+Ember.PanGestureRecognizer = Ember.Gesture.extend({
 
   /**
     The translation value which represents the current amount of movement that has been applied
@@ -1102,7 +1100,7 @@ SC.PanGestureRecognizer = SC.Gesture.extend({
   }
 });
 
-SC.Gestures.register('pan', SC.PanGestureRecognizer);
+Ember.Gestures.register('pan', Ember.PanGestureRecognizer);
 
 })({});
 
@@ -1114,8 +1112,8 @@ SC.Gestures.register('pan', SC.PanGestureRecognizer);
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 /**
   @class
@@ -1124,7 +1122,7 @@ var set = SC.set;
   of wiggle-room between a start and end of a touch. Taps are discrete gestures
   so only tapEnd() will get fired on a view.
 
-    var myview = SC.View.create({
+    var myview = Ember.View.create({
       elementId: 'gestureTest',
 
       tapEnd: function(recognizer) {
@@ -1135,7 +1133,7 @@ var set = SC.set;
   You can specify how many touches the gesture requires to start using the numberOfRequiredTouches
   property, which you can set in the panOptions hash:
 
-    var myview = SC.View.create({
+    var myview = Ember.View.create({
       tapOptions: {
         numberOfTaps: 3
       }
@@ -1145,9 +1143,9 @@ var set = SC.set;
   And you can also specify the number of taps required for the gesture to fire using the numberOfTaps
   property.
 
-  @extends SC.Gesture
+  @extends Ember.Gesture
 */
-SC.TapGestureRecognizer = SC.Gesture.extend({
+Ember.TapGestureRecognizer = Ember.Gesture.extend({
 
   /**
     The translation value which represents the current amount of movement that has been applied
@@ -1219,7 +1217,7 @@ SC.TapGestureRecognizer = SC.Gesture.extend({
   }
 });
 
-SC.Gestures.register('tap', SC.TapGestureRecognizer);
+Ember.Gestures.register('tap', Ember.TapGestureRecognizer);
 
 })({});
 
@@ -1238,21 +1236,21 @@ SC.Gestures.register('tap', SC.TapGestureRecognizer);
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var get = SC.get;
-var set = SC.set;
+var get = Ember.get;
+var set = Ember.set;
 
 /** 
   @class
   
-  Extends SC.View by making the init method gesture-aware.
+  Extends Ember.View by making the init method gesture-aware.
 
-  @extends SC.Object
+  @extends Ember.Object
 */
-SC.View.reopen(
-/** @scope SC.View.prototype */{
+Ember.View.reopen(
+/** @scope Ember.View.prototype */{
 
   /**
-    The SC.GestureManager instance which will manager the gestures of the view.    
+    The Ember.GestureManager instance which will manager the gestures of the view.    
     This object is automatically created and set at init-time.
 
     @default null
@@ -1267,7 +1265,7 @@ SC.View.reopen(
   init: function() {
     this._super();
 
-    var knownGestures = SC.Gestures.knownGestures();
+    var knownGestures = Ember.Gestures.knownGestures();
     var eventManager = get(this, 'eventManager');
 
     if (knownGestures && !eventManager) {
@@ -1290,7 +1288,7 @@ SC.View.reopen(
         }
       }
 
-      var manager = SC.GestureManager.create({
+      var manager = Ember.GestureManager.create({
         gestures: gestures
       });
 
