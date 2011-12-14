@@ -1,11 +1,11 @@
-(function() {
+
+(function(exports) {
 // ==========================================================================
 // Project:   Ember - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
 var get = Ember.get, set = Ember.set;
 
 // simple copy op needed for just this code.
@@ -24,7 +24,7 @@ function copy(opts) {
   @constant
   @type Error
 */
-Ember.EmberANNER_OUT_OF_BOUNDS_ERROR = "Out of bounds.";
+Ember.SCANNER_OUT_OF_BOUNDS_ERROR = "Out of bounds.";
 
 /**
   Standard error thrown by `Ember.Scanner` when  you pass a value not an integer.
@@ -33,7 +33,7 @@ Ember.EmberANNER_OUT_OF_BOUNDS_ERROR = "Out of bounds.";
   @constant
   @type Error
 */
-Ember.EmberANNER_INT_ERROR = "Not an int.";
+Ember.SCANNER_INT_ERROR = "Not an int.";
 
 /**
   Standard error thrown by `Ember.Scanner` when it cannot find a string to skip.
@@ -42,7 +42,7 @@ Ember.EmberANNER_INT_ERROR = "Not an int.";
   @constant
   @type Error
 */
-Ember.EmberANNER_SKIP_ERROR = "Did not find the string to skip.";
+Ember.SCANNER_SKIP_ERROR = "Did not find the string to skip.";
 
 /**
   Standard error thrown by `Ember.Scanner` when it can any kind a string in the
@@ -52,7 +52,7 @@ Ember.EmberANNER_SKIP_ERROR = "Did not find the string to skip.";
   @constant
   @type Error
 */
-Ember.EmberANNER_EmberAN_ARRAY_ERROR = "Did not find any string of the given array to scan.";
+Ember.SCANNER_SCAN_ARRAY_ERROR = "Did not find any string of the given array to scan.";
 
 /**
   Standard error thrown when trying to compare two dates in different
@@ -87,7 +87,7 @@ Ember.DATETIME_ISO8601 = '%Y-%m-%dT%H:%M:%S%Z';
   Scanners are used by `DateTime` to convert strings into `DateTime` objects.
 
   @extends Ember.Object
-  @since SproutCore 1.0
+  @since Ember 0.9
   @author Martin Ottenwaelter
 */
 var Scanner = Ember.Object.extend({
@@ -115,12 +115,12 @@ var Scanner = Ember.Object.extend({
     accordingly.
 
     @param {Integer} len The amount of characters to read
-    @throws {Ember.EmberANNER_OUT_OF_BOUNDS_ERROR} If asked to read too many characters
+    @throws {Ember.SCANNER_OUT_OF_BOUNDS_ERROR} If asked to read too many characters
     @returns {String} The characters
   */
   scan: function(len) {
     if (this.scanLocation + len > this.length) {
-      throw new Error(Ember.EmberANNER_OUT_OF_BOUNDS_ERROR);
+      throw new Error(Ember.SCANNER_OUT_OF_BOUNDS_ERROR);
     }
     var str = this.string.substr(this.scanLocation, len);
     this.scanLocation += len;
@@ -132,7 +132,7 @@ var Scanner = Ember.Object.extend({
 
     @param {Integer} min_len The minimum amount of characters to read
     @param {Integer} [max_len] The maximum amount of characters to read (defaults to the minimum)
-    @throws {Ember.EmberANNER_INT_ERROR} If asked to read non numeric characters
+    @throws {Ember.SCANNER_INT_ERROR} If asked to read non numeric characters
     @returns {Integer} The scanned integer
   */
   scanInt: function(min_len, max_len) {
@@ -140,7 +140,7 @@ var Scanner = Ember.Object.extend({
     var str = this.scan(max_len);
     var re = new RegExp("^\\d{" + min_len + "," + max_len + "}");
     var match = str.match(re);
-    if (!match) throw new Error(Ember.EmberANNER_INT_ERROR);
+    if (!match) throw new Error(Ember.SCANNER_INT_ERROR);
     if (match[0].length < max_len) {
       this.scanLocation += match[0].length - max_len;
     }
@@ -151,12 +151,12 @@ var Scanner = Ember.Object.extend({
     Attempts to skip a given string.
 
     @param {String} str The string to skip
-    @throws {Ember.EmberANNER_SKIP_ERROR} If the given string could not be scanned
+    @throws {Ember.SCANNER_SKIP_ERROR} If the given string could not be scanned
     @returns {Boolean} YES if the given string was successfully scanned, NO otherwise
   */
   skipString: function(str) {
     if (this.scan(str.length) !== str) {
-      throw new Error(Ember.EmberANNER_SKIP_ERROR);
+      throw new Error(Ember.SCANNER_SKIP_ERROR);
     }
     
     return YES;
@@ -166,7 +166,7 @@ var Scanner = Ember.Object.extend({
     Attempts to scan any string in a given array.
 
     @param {Array} ary the array of strings to scan
-    @throws {Ember.EmberANNER_EmberAN_ARRAY_ERROR} If no string of the given array is found
+    @throws {Ember.SCANNER_SCAN_ARRAY_ERROR} If no string of the given array is found
     @returns {Integer} The index of the scanned string of the given array
   */
   scanArray: function(ary) {
@@ -176,7 +176,7 @@ var Scanner = Ember.Object.extend({
       }
       this.scanLocation -= ary[i].length;
     }
-    throw new Error(Ember.EmberANNER_EmberAN_ARRAY_ERROR);
+    throw new Error(Ember.SCANNER_SCAN_ARRAY_ERROR);
   }
 
 });
@@ -218,7 +218,7 @@ var Scanner = Ember.Object.extend({
   @author Martin Ottenwaelter
   @author Jonathan Lewis
   @author Josh Holt
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.DateTime = Ember.Object.extend(Ember.Freezable, Ember.Copyable,
 /** @scope Ember.DateTime.prototype */ {
@@ -1175,12 +1175,13 @@ Ember.Binding.dateTime = function(format) {
 };
 
 
-})();
-(function() {
+})({});
+
+
+(function(exports) {
 // ==========================================================================
-// Project:   SproutCore DateTime
+// Project:   Ember DateTime
 // Copyright: ©2010 Strobe Inc. and contributors
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-})();
+})({});

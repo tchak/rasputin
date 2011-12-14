@@ -6,6 +6,7 @@ This is a gem for integration of Ember.js with Rails 3.1 assets pipeline.
 It provide direct requires for official ember packages :
 
 * ember
+* ember-datetime
 * ember-datastore
 * ember-touch
 * ember-routing
@@ -75,6 +76,10 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.11.2
+
+* update Ember.js to latest master
 
 0.11.0
 

@@ -1625,7 +1625,10 @@ if ('undefined' === typeof Ember) {
   The core Runtime framework is based on the jQuery API with a number of
   performance optimizations.
 */
-Ember = {};
+
+// Create core object. Make it act like an instance of Ember.Namespace so that
+// objects assigned to it are given a sane string representation.
+Ember = { isNamespace: true, toString: function() { return "Ember"; } };
 
 // aliases needed to keep minifiers from removing the global context
 if ('undefined' !== typeof window) {
@@ -1692,7 +1695,7 @@ Ember.K = function() { return this; };
     will be executed.  If the function returns false an exception will be
     thrown.
 */
-window.ember_assert = function ember_assert(desc, test) {
+window.ember_assert = window.sc_assert = function ember_assert(desc, test) {
   if ('function' === typeof test) test = test()!==false;
   if (!test) throw new Error("assertion failed: "+desc);
 };
@@ -2542,8 +2545,7 @@ Ember.trySetPath = function(root, path, value) {
 */
 Ember.isGlobalPath = function(path) {
   return !HAS_THIS.test(path) && IS_GLOBAL.test(path);
-}
-
+};
 
 })({});
 
@@ -2632,7 +2634,7 @@ var array_Slice = Array.prototype.slice;
 var ObserverSet = function(iterateable) {
   this.set = {};
   if (iterateable) { this.array = []; }
-}
+};
 
 ObserverSet.prototype.add = function(target, name) {
   var set = this.set, guid = Ember.guidFor(target), array;
@@ -2707,11 +2709,11 @@ Ember.endPropertyChanges = function() {
 Ember.changeProperties = function(cb){
   Ember.beginPropertyChanges();
   try {
-    cb()
+    cb();
   } finally {
     Ember.endPropertyChanges();
   }
-}
+};
 
 function changeEvent(keyName) {
   return keyName+AFTER_OBSERVERS;
@@ -2736,7 +2738,7 @@ function xformForArgs(args) {
     if (method.length>2) val = Ember.getPath(obj, keyName);
     copy_args.unshift(obj, keyName, val);
     method.apply(target, copy_args);
-  }
+  };
 }
 
 var xformChange = xformForArgs([]);
@@ -3825,7 +3827,7 @@ var RunLoop = function(prev) {
   self.onceTimers = {};
 
   return self;
-}
+};
 
 K.prototype = RunLoop.prototype;
 
@@ -4973,7 +4975,7 @@ function mixinProperties(to, from) {
       to[key] = from[key];
     }
   }
-};
+}
 
 mixinProperties(Binding, {
 
@@ -5119,7 +5121,7 @@ Ember.bind = function(obj, to, from) {
 
 Ember.oneWay = function(obj, to, from) {
   return new Ember.Binding(to, from).oneWay().connect(obj);
-}
+};
 
 })({});
 
@@ -5459,7 +5461,7 @@ function invokeEvents(targetSet, params) {
     for(var methodGuid in actionSet) {
       if (SKIP_PROPERTIES[methodGuid]) { continue; }
 
-      var action = actionSet[methodGuid]
+      var action = actionSet[methodGuid];
       if (!action) { continue; }
 
       // Extract target and method for each action
@@ -5988,6 +5990,7 @@ Mixin.prototype.keys = function() {
 /** @private - make Mixin's have nice displayNames */
 
 var NAME_KEY = Ember.GUID_KEY+'_name';
+var get = Ember.get;
 
 function processNames(paths, root, seen) {
   var idx = paths.length;
@@ -5998,7 +6001,7 @@ function processNames(paths, root, seen) {
 
     if (obj && obj.toString === classToString) {
       obj[NAME_KEY] = paths.join('.');
-    } else if (key==='Ember' || (Ember.Namespace && obj instanceof Ember.Namespace)) {
+    } else if (obj && get(obj, 'isNamespace')) {
       if (seen[Ember.guidFor(obj)]) continue;
       seen[Ember.guidFor(obj)] = true;
       processNames(paths, obj, seen);
@@ -6019,7 +6022,7 @@ function findNamespaces() {
 
     obj = window[prop];
 
-    if (obj && obj instanceof Namespace) {
+    if (obj && get(obj, 'isNamespace')) {
       obj[NAME_KEY] = prop;
     }
   }
@@ -6030,12 +6033,12 @@ Ember.identifyNamespaces = findNamespaces;
 superClassString = function(mixin) {
   var superclass = mixin.superclass;
   if (superclass) {
-    if (superclass[NAME_KEY]) { return superclass[NAME_KEY] }
+    if (superclass[NAME_KEY]) { return superclass[NAME_KEY]; }
     else { return superClassString(superclass); }
   } else {
     return;
   }
-}
+};
 
 classToString = function() {
   var Namespace = Ember.Namespace, namespace;
@@ -8484,6 +8487,7 @@ Ember.Error = function() {
   for (var p in tmp) {
     if (tmp.hasOwnProperty(p)) { this[p] = tmp[p]; }
   }
+  this.message = tmp.message;
 };
 
 Ember.Error.prototype = Ember.create(Error.prototype);
@@ -9670,6 +9674,8 @@ Ember.TargetActionSupport = Ember.Mixin.create({
 
 */
 Ember.Namespace = Ember.Object.extend({
+  isNamespace: true,
+
   init: function() {
     Ember.Namespace.NAMESPACES.push(this);
     Ember.Namespace.PROCESSED = false;
@@ -9688,8 +9694,8 @@ Ember.Namespace = Ember.Object.extend({
   }
 });
 
-Ember.Namespace.NAMESPACES = [];
-Ember.Namespace.PROCESSED = true;
+Ember.Namespace.NAMESPACES = [Ember];
+Ember.Namespace.PROCESSED = false;
 
 })({});
 
@@ -10520,7 +10526,7 @@ Ember.EventDispatcher = Ember.Object.extend(
     ember_assert('You cannot make a new Ember.Application using a root element that is a descendent of an existing Ember.Application', !rootElement.closest('.ember-application').length);
     ember_assert('You cannot make a new Ember.Application using a root element that is an ancestor of an existing Ember.Application', !rootElement.find('.ember-application').length);
 
-    rootElement.addClass('ember-application')
+    rootElement.addClass('ember-application');
 
     for (event in events) {
       if (events.hasOwnProperty(event)) {
@@ -11390,7 +11396,9 @@ Ember.View = Ember.Object.extend(
     // In the interim, we will just re-render if that happens. It is more
     // important than elements get garbage collected.
     this.destroyElement();
-    this.clearRenderedChildren();
+    this.invokeRecursively(function(view) {
+      view.clearRenderedChildren();
+    });
   },
 
   /**
@@ -12523,7 +12531,7 @@ Ember.ContainerView.states = {
 
 Ember.ContainerView.states.inDOM = {
   parentState: Ember.ContainerView.states.hasElement
-}
+};
 
 Ember.ContainerView.reopen({
   states: Ember.ContainerView.states
@@ -12673,7 +12681,7 @@ Ember.CollectionView = Ember.ContainerView.extend(
       var emptyView = get(this, 'emptyView');
       if (!emptyView) { return; }
 
-      emptyView = this.createChildView(emptyView)
+      emptyView = this.createChildView(emptyView);
       addedViews.push(emptyView);
       set(this, 'emptyView', emptyView);
     }
@@ -12803,6 +12811,27 @@ Ember.StateManager = Ember.State.extend({
 
   currentState: null,
 
+  /**
+    If the current state is a view state or the descendent of a view state,
+    this property will be the view associated with it. If there is no
+    view state active in this state manager, this value will be null.
+  */
+  currentView: SC.computed(function() {
+    var currentState = get(this, 'currentState'),
+        view;
+
+    while (currentState) {
+      if (get(currentState, 'isViewState')) {
+        view = get(currentState, 'view');
+        if (view) { return view; }
+      }
+
+      currentState = get(currentState, 'parentState');
+    }
+
+    return null;
+  }).property('currentState').cacheable(),
+
   send: function(event, context) {
     this.sendRecursively(event, get(this, 'currentState'), context);
   },
@@ -12832,9 +12861,9 @@ Ember.StateManager = Ember.State.extend({
     if (!newState) {
       while (state && !newState) {
         exitStates[Ember.guidFor(state)] = state;
-        exitStates.push(state)
+        exitStates.push(state);
 
-        state = get(state, 'parentState')
+        state = get(state, 'parentState');
         if (!state) {
           state = get(this, 'states');
         }
@@ -12872,7 +12901,7 @@ Ember.StateManager = Ember.State.extend({
       resume: function() {
         self.asyncEach(tail, callback, doneCallback);
       }
-    }
+    };
 
     callback.call(this, head, transition);
 
@@ -12927,6 +12956,8 @@ Ember.StateManager = Ember.State.extend({
 var get = Ember.get, set = Ember.set;
 
 Ember.ViewState = Ember.State.extend({
+  isViewState: true,
+
   enter: function(stateManager) {
     var view = get(this, 'view');
 
