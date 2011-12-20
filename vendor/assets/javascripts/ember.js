@@ -1608,7 +1608,7 @@ if ('undefined' === typeof Ember) {
 /**
   @namespace
   @name Ember
-  @version 0.9
+  @version 0.9.3
 
   All Ember methods and functions are defined inside of this namespace.
   You generally should not add new properties to this namespace as it may be
@@ -1640,10 +1640,10 @@ if ('undefined' !== typeof window) {
 /**
   @static
   @type String
-  @default '0.9'
+  @default '0.9.3'
   @constant
 */
-Ember.VERSION = '0.9';
+Ember.VERSION = '0.9.3';
 
 /**
   @static
@@ -3834,6 +3834,9 @@ K.prototype = RunLoop.prototype;
 RunLoop.prototype = {
   end: function() {
     this.flush();
+  },
+
+  prev: function() {
     return this._prev;
   },
 
@@ -3970,7 +3973,12 @@ Ember.run.begin = function() {
 */
 Ember.run.end = function() {
   ember_assert('must have a current run loop', run.currentRunLoop);
-  run.currentRunLoop = run.currentRunLoop.end();
+  try {
+    run.currentRunLoop.end();
+  }
+  finally {
+    run.currentRunLoop = run.currentRunLoop.prev();
+  }
 };
 
 /**
@@ -11346,6 +11354,28 @@ Ember.View = Ember.Object.extend(
   },
 
   /**
+    Replaces the view's element to the specified parent element.
+    If the view does not have an HTML representation yet, `createElement()`
+    will be called automatically.
+    If the parent element already has some content, it will be removed.
+
+    Note that this method just schedules the view to be appended; the DOM
+    element will not be appended to the given element until all bindings have
+    finished synchronizing
+
+    @param {String|DOMElement|jQuery} A selector, element, HTML string, or jQuery object
+    @returns {Ember.View} received
+  */
+  replaceIn: function(target) {
+    this._insertElementLater(function() {
+      Ember.$(target).empty();
+      this.$().appendTo(target);
+    });
+
+    return this;
+  },
+
+  /**
     @private
 
     Schedules a DOM operation to occur during the next render phase. This
@@ -12094,8 +12124,8 @@ Ember.View.states.preRender = {
   // a view leaves the preRender state once its element has been
   // created (createElement).
   insertElement: function(view, fn) {
-    view._notifyWillInsertElement(true);
     view.createElement();
+    view._notifyWillInsertElement(true);
     // after createElement, the view will be in the hasElement state.
     fn.call(view);
     view.transitionTo('inDOM');
@@ -13036,7 +13066,7 @@ Ember.ViewState = Ember.State.extend({
 
   K.prototype = Metamorph.prototype;
 
-  var rangeFor, htmlFunc, removeFunc, outerHTMLFunc, appendToFunc, startTagFunc, endTagFunc;
+  var rangeFor, htmlFunc, removeFunc, outerHTMLFunc, appendToFunc, afterFunc, prependFunc, startTagFunc, endTagFunc;
 
   outerHTMLFunc = function() {
     return this.startTag() + this.innerHTML + this.endTag();
@@ -13093,7 +13123,7 @@ Ember.ViewState = Ember.State.extend({
       // create a new document fragment for the HTML
       var fragment = range.createContextualFragment(html);
 
-      // inser the fragment into the range
+      // insert the fragment into the range
       range.insertNode(fragment);
     };
 
@@ -13113,6 +13143,29 @@ Ember.ViewState = Ember.State.extend({
       var frag = range.createContextualFragment(this.outerHTML());
       node.appendChild(frag);
     };
+
+    afterFunc = function(html) {
+      var range = document.createRange();
+      var after = document.getElementById(this.end);
+
+      range.setStartAfter(after);
+      range.setEndAfter(after);
+
+      var fragment = range.createContextualFragment(html);
+      range.insertNode(fragment);
+    };
+
+    prependFunc = function(html) {
+      var range = document.createRange();
+      var start = document.getElementById(this.start);
+
+      range.setStartAfter(start);
+      range.setEndAfter(start);
+
+      var fragment = range.createContextualFragment(html);
+      range.insertNode(fragment);
+    };
+
   } else {
     /**
      * This code is mostly taken from jQuery, with one exception. In jQuery's case, we
@@ -13297,6 +13350,43 @@ Ember.ViewState = Ember.State.extend({
         node = nextSibling;
       }
     };
+
+    afterFunc = function(html) {
+      // get the real starting node. see realNode for details.
+      var end = document.getElementById(this.end);
+      var parentNode = end.parentNode;
+      var nextSibling;
+      var node;
+
+      // get the first node for the HTML string, even in cases like
+      // tables and lists where a simple innerHTML on a div would
+      // swallow some of the content.
+      node = firstNodeFor(parentNode, html);
+
+      // copy the nodes for the HTML between the starting and ending
+      // placeholder.
+      while (node) {
+        nextSibling = node.nextSibling;
+        parentNode.insertBefore(node, end.nextSibling);
+        node = nextSibling;
+      }
+    };
+
+    prependFunc = function(html) {
+      var start = document.getElementById(this.start);
+      var parentNode = start.parentNode;
+      var nextSibling;
+      var node;
+
+      node = firstNodeFor(parentNode, html);
+      var insertBefore = start.nextSibling;
+
+      while (node) {
+        nextSibling = node.nextSibling;
+        parentNode.insertBefore(node, insertBefore);
+        node = nextSibling;
+      }
+    }
   }
 
   Metamorph.prototype.html = function(html) {
@@ -13316,6 +13406,8 @@ Ember.ViewState = Ember.State.extend({
   Metamorph.prototype.remove = removeFunc;
   Metamorph.prototype.outerHTML = outerHTMLFunc;
   Metamorph.prototype.appendTo = appendToFunc;
+  Metamorph.prototype.after = afterFunc;
+  Metamorph.prototype.prepend = prependFunc;
   Metamorph.prototype.startTag = startTagFunc;
   Metamorph.prototype.endTag = endTagFunc;
 
@@ -13707,6 +13799,48 @@ Ember.TextArea = Ember.View.extend(Ember.TextSupport, {
 
 
 (function(exports) {
+Ember.TabContainerView = Ember.View.extend();
+
+})({});
+
+
+(function(exports) {
+var get = Ember.get, getPath = Ember.getPath;
+
+Ember.TabPaneView = Ember.View.extend({
+  tabsContainer: SC.computed(function() {
+    return this.nearestInstanceOf(Ember.TabContainerView);
+  }).property(),
+
+  isVisible: SC.computed(function() {
+    return get(this, 'viewName') === getPath(this, 'tabsContainer.currentView');
+  }).property('tabsContainer.currentView')
+});
+
+})({});
+
+
+(function(exports) {
+var get = Ember.get, setPath = Ember.setPath;
+
+Ember.TabView = Ember.View.extend({
+  tabsContainer: SC.computed(function() {
+    return this.nearestInstanceOf(Ember.TabContainerView);
+  }).property(),
+
+  mouseUp: function() {
+    setPath(this, 'tabsContainer.currentView', get(this, 'value'));
+  }
+});
+
+})({});
+
+
+(function(exports) {
+})({});
+
+
+(function(exports) {
 // ==========================================================================
 // Project:   Ember Handlebar Views
 // Copyright: ©2011 Strobe Inc. and contributors.
@@ -13755,8 +13889,7 @@ Ember.Metamorph = Ember.Mixin.create({
 
       childView._insertElementLater(function() {
         var morph = get(view, 'morph');
-        var script = Ember.$("#" + morph.start);
-        script.after(get(childView, 'outerHTML'));
+        morph.prepend(get(childView, 'outerHTML'));
         childView.set('outerHTML', null);
       });
     },
@@ -13766,8 +13899,7 @@ Ember.Metamorph = Ember.Mixin.create({
 
       nextView._insertElementLater(function() {
         var morph = get(view, 'morph');
-        var script = Ember.$("#" + morph.end);
-        script.after(get(nextView, 'outerHTML'));
+        morph.after(get(nextView, 'outerHTML'));
         nextView.set('outerHTML', null);
       });
     },
@@ -14172,7 +14304,7 @@ Ember.Handlebars.registerHelper('bindAttr', function(options) {
 
       ember_assert(fmt("Attributes must be numbers, strings or booleans, not %@", [result]), result == null || typeof result === 'number' || typeof result === 'string' || typeof result === 'boolean');
 
-      var elem = view.$("[data-handlebars-id='" + dataId + "']");
+      var elem = view.$("[data-bindAttr-" + dataId + "='" + dataId + "']");
 
       // If we aren't able to find the element, it means the element
       // to which we were bound has been removed from the view.
@@ -14221,7 +14353,7 @@ Ember.Handlebars.registerHelper('bindAttr', function(options) {
   }, this);
 
   // Add the unique identifier
-  ret.push('data-handlebars-id="' + dataId + '"');
+  ret.push('data-bindAttr-' + dataId + '="' + dataId + '"');
   return new Ember.Handlebars.SafeString(ret.join(' '));
 });
 
@@ -14246,12 +14378,12 @@ Ember.Handlebars.registerHelper('bindAttr', function(options) {
   @param {Ember.View} view
     The view in which observers should look for the element to update
 
-  @param {String} id 
-    Optional id use to lookup elements
+  @param {Srting} bindAttrId
+    Optional bindAttr id used to lookup elements
 
   @returns {Array} An array of class names to add
 */
-Ember.Handlebars.bindClasses = function(context, classBindings, view, id) {
+Ember.Handlebars.bindClasses = function(context, classBindings, view, bindAttrId) {
   var ret = [], newClass, value, elem;
 
   // Helper method to retrieve the property from the context and
@@ -14303,7 +14435,7 @@ Ember.Handlebars.bindClasses = function(context, classBindings, view, id) {
     observer = function() {
       // Get the current value of the property
       newClass = classStringForProperty(binding);
-      elem = id ? view.$("[data-handlebars-id='" + id + "']") : view.$();
+      elem = bindAttrId ? view.$("[data-bindAttr-" + bindAttrId + "='" + bindAttrId + "']") : view.$();
 
       // If we can't find the element anymore, a parent template has been
       // re-rendered and we've been nuked. Remove the observer.
@@ -14408,14 +14540,10 @@ Ember.Handlebars.ViewHelper = Ember.Object.create({
       if (Ember.IS_BINDING.test(prop)) {
         path = options[prop];
         if (!Ember.isGlobalPath(path)) {
-
-          // Deprecation warning for users of beta 2 and lower, where
-          // this facility was not available. The workaround was to bind
-          // to parentViews; since this is no longer necessary, issue
-          // a notice.
-          if (PARENT_VIEW_PATH.test(path)) {
-            Ember.Logger.warn("As of SproutCore 2.0 beta 3, it is no longer necessary to bind to parentViews. Instead, please provide binding paths relative to the current Handlebars context.");
-          } else {
+          // Binding to parentViews was previously deprecated. In most cases it shouldn't be necessary, but since
+          // there are a few valid use cases and most people have broken the parentView habit, we're no longer
+          // providing a warning about it.
+          if (!PARENT_VIEW_PATH.test(path)) {
             if (path === 'this') {
               options[prop] = 'bindingContext';
             } else {
@@ -14718,16 +14846,24 @@ Ember.Handlebars.registerHelper('template', function(name, options) {
 // Find templates stored in the head tag as script tags and make them available
 // to Ember.CoreView in the global Ember.TEMPLATES object. This will be run as as
 // jQuery DOM-ready callback.
+//
+// Script tags with type="text/html" or "text/x-handlebars" will be compiled
+// with Ember's Handlebars and are suitable for use as a view's template.
+// Those with type="text/x-raw-handlebars" will be compiled with regular
+// Handlebars and are suitable for use in views' computed properties.
 Ember.Handlebars.bootstrap = function() {
-  Ember.$('script[type="text/html"], script[type="text/x-handlebars"]')
+  Ember.$('script[type="text/html"], script[type="text/x-handlebars"], script[type="text/x-raw-handlebars"]')
     .each(function() {
     // Get a reference to the script tag
     var script = Ember.$(this),
+      compile = (script.attr('type') === 'text/x-raw-handlebars') ?
+                  Ember.$.proxy(Handlebars.compile, Handlebars) :
+                  Ember.$.proxy(Ember.Handlebars.compile, Ember.Handlebars),
       // Get the name of the script, used by Ember.View's templateName property.
       // First look for data-template-name attribute, then fall back to its
       // id if no name is found.
       templateName = script.attr('data-template-name') || script.attr('id'),
-      template = Ember.Handlebars.compile(script.html()),
+      template = compile(script.html()),
       view, viewPath;
 
     if (templateName) {
