@@ -1,12 +1,10 @@
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore IndexSet
+// Project:   Ember IndexSet
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals ember_assert */
-
 var get = Ember.get, set = Ember.set, abs = Math.abs;
 
 function isIndexSet(obj) {
@@ -99,7 +97,6 @@ function _sliceContent(c) {
   @extends Ember.MutableEnumerable
   @extends Ember.Copyable
   @extends Ember.Freezable
-  @since SproutCore 1.0
 */
 Ember.IndexSet = Ember.Object.extend(Ember.Enumerable, Ember.MutableEnumerable, Ember.Freezable, Ember.Copyable,
 /** @scope Ember.IndexSet.prototype */ {
@@ -1240,18 +1237,15 @@ Ember.IndexSet.reopenClass({
 
 
 (function(exports) {
-
 })({});
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
 var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
 
 /**
@@ -1292,15 +1286,15 @@ var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
       q = Ember.Query.create({
         conditions: "firstName = 'Jonny' AND lastName = 'Cash'",
         recordType: MyApp.MyModel,
-        orderBy: "lastName, year DEEmber"
+        orderBy: "lastName, year DESC"
       });
 
   The default order direction is ascending. You can change it to descending
-  by writing `'DEEmber'` behind the property name like in the example above.
+  by writing `'DESC'` behind the property name like in the example above.
   If no order is given, or records are equal in respect to a given order,
   records will be ordered by guid.
 
-  SproutCore Query Language
+  Ember Query Language
   =====
 
   Features of the query language:
@@ -1385,7 +1379,7 @@ var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
   @extends Ember.Object
   @extends Ember.Copyable
   @extends Ember.Freezable
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 
 Ember.Query = Ember.Object.extend(Ember.Copyable, Ember.Freezable,
@@ -1412,7 +1406,7 @@ Ember.Query = Ember.Object.extend(Ember.Copyable, Ember.Freezable,
 
   /**
     Optional orderBy parameters.  This can be a string of keys, optionally
-    beginning with the strings `"DEEmber "` or `"AEmber "` to select descending or
+    beginning with the strings `"DESC "` or `"ASC "` to select descending or
     ascending order.
 
     Alternatively, you can specify a comparison function, in which case the
@@ -2158,8 +2152,7 @@ Ember.Query = Ember.Object.extend(Ember.Copyable, Ember.Freezable,
       // reserved words
       if ( !t.delimeted ) {
         for ( var anotherToken in grammar ) {
-          if ( grammar[anotherToken].reservedWord
-               && anotherToken == tokenValue ) {
+          if ( grammar[anotherToken].reservedWord && anotherToken == tokenValue ) {
             tokenType = anotherToken;
           }
         }
@@ -2340,8 +2333,7 @@ Ember.Query = Ember.Object.extend(Ember.Copyable, Ember.Freezable,
     function tokenIsMissingChilds (position) {
       var p = position;
       if ( p < 0 )  return true;
-      return (expectedType('left',p) && !l[p].leftSide)
-          || (expectedType('right',p) && !l[p].rightSide);
+      return (expectedType('left',p) && !l[p].leftSide) || (expectedType('right',p) && !l[p].rightSide);
     }
 
     function typesAreMatching (parent, child) {
@@ -2451,7 +2443,7 @@ Ember.Query = Ember.Object.extend(Ember.Copyable, Ember.Freezable,
         p = p.replace(/\s+/,',');
         p = p.split(',');
         o[i] = {propertyName: p[0]};
-        if (p[1] && p[1] == 'DEEmber') o[i].descending = true;
+        if (p[1] && p[1] == 'DESC') o[i].descending = true;
       }
 
       return o;
@@ -2765,13 +2757,11 @@ Ember.Query.registerQueryExtension = function(tokenName, token) {
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-// @global Ember
-
 var get = Ember.get, set = Ember.set;
 
 /**
@@ -2779,7 +2769,7 @@ var get = Ember.get, set = Ember.set;
 
   An error, used to represent an error state.
 
-  Many API's within SproutCore will return an instance of this object whenever
+  Many API's within Ember will return an instance of this object whenever
   they have an error occur.  An error includes an error code, description,
   and optional human readable label that indicates the item that failed.
 
@@ -2800,7 +2790,7 @@ var get = Ember.get, set = Ember.set;
   instead of the receiver.
 
   @extends Ember.Object
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.StoreError = Ember.Object.extend(
 /** @scope Ember.StoreError.prototype */ {
@@ -2857,7 +2847,7 @@ Ember.StoreError = Ember.Object.extend(
     @type Boolean
   */
   isError: YES
-}) ;
+});
 
 /**
   Creates a new Ember.StoreError instance with the passed description, label, and
@@ -2873,8 +2863,8 @@ Ember.StoreError.desc = function(description, label, value, code) {
   if (label !== undefined) opts.label = label ;
   if (code !== undefined) opts.code = code ;
   if (value !== undefined) opts.errorValue = value ;
-  return this.create(opts) ;
-} ;
+  return this.create(opts);
+};
 
 /**
   Shorthand form of the Ember.StoreError.desc method.
@@ -2887,7 +2877,7 @@ Ember.StoreError.desc = function(description, label, value, code) {
 
 Ember.$error = function(description, label, value, c) {
   return Ember.StoreError.desc(description,label, value, c);
-} ;
+};
 
 /**
   Returns NO if the passed value is an error object or false.
@@ -2933,24 +2923,21 @@ Ember.StoreError.HAS_MULTIPLE_VALUES = -100 ;
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
 var get = Ember.get, set = Ember.set, none = Ember.none, copy = Ember.copy, K;
 
 /**
   @class
 
-  A Record is the core model class in SproutCore. It is analogous to
+  A Record is the core model class in Ember. It is analogous to
   NSManagedObject in Core Data and EOEnterpriseObject in the Enterprise
   Objects Framework (aka WebObjects), or ActiveRecord::Base in Rails.
 
-  To create a new model class, in your SproutCore workspace, do:
+  To create a new model class, in your Ember workspace, do:
 
       $ sc-gen model MyApp.MyModel
 
@@ -2971,7 +2958,7 @@ var get = Ember.get, set = Ember.set, none = Ember.none, copy = Ember.copy, K;
 
   @extends Ember.Object
   @see Ember.RecordAttribute
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.Record = Ember.Object.extend(
 /** @scope Ember.Record.prototype */ {
@@ -4411,14 +4398,11 @@ K = Ember.Record;
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
 var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
 
 /** @class
@@ -4457,7 +4441,7 @@ var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
   @see Ember.Record
   @see Ember.ManyAttribute
   @see Ember.SingleAttribute
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.RecordAttribute = Ember.Object.extend(
   /** @scope Ember.RecordAttribute.prototype */ {
@@ -4586,7 +4570,7 @@ Ember.RecordAttribute = Ember.Object.extend(
       if(klass.superclass && klass.superclass.hasOwnProperty('create')) {
         klass = klass.superclass ;
       }
-      
+
       // otherwise return the function transform handler
       else klass = 'function' ;
     }
@@ -4626,7 +4610,7 @@ Ember.RecordAttribute = Ember.Object.extend(
           key: key
         };
 
-        for(i = 0; i < len; i++) Ember.addObserver(value, children[i], this, this._EmberRA_childObserver, context);
+        for(i = 0; i < len; i++) Ember.addObserver(value, children[i], this, this._SCRA_childObserver, context);
       }
     }
 
@@ -4651,7 +4635,7 @@ Ember.RecordAttribute = Ember.Object.extend(
     @param {Object} prev Previous value (not used)
     @param {Object} context Hash of extra context information
   */
-  _EmberRA_childObserver: function(obj, key, prev, context) {
+  _SCRA_childObserver: function(obj, key, prev, context) {
     // write the new value back to the record
     this.call(context.record, context.key, obj);
 
@@ -4735,11 +4719,11 @@ Ember.RecordAttribute = Ember.Object.extend(
     this.cacheKey = "__cache__" + Ember.guidFor(this) ;
     this.lastSetValueKey = "__lastValue__" + Ember.guidFor(this) ;
   },
-  
-  /** 
-    @private 
-    
-    Returns a computed property value that can be assigned directly to a 
+
+  /**
+    @private
+
+    Returns a computed property value that can be assigned directly to a
     property on a record for this attribute.
   */
   computed: function() {
@@ -4816,12 +4800,12 @@ Ember.RecordAttribute.reopenClass(
   registerTransform: function(klass, transform) {
     Ember.RecordAttribute.transforms[Ember.guidFor(klass)] = transform;
   },
-  
+
   /**
-    Retrieves the original record attribute for the passed key.  You can't 
-    use get() to retrieve record attributes because that will invoke the 
+    Retrieves the original record attribute for the passed key.  You can't
+    use get() to retrieve record attributes because that will invoke the
     property instead.
-  
+
     @param {Ember.Record} rec record instance to inspect
     @param {String} keyName key name to retrieve
     @returns {Ember.RecordAttribute} the attribute or null if none defined
@@ -4861,7 +4845,7 @@ Ember.RecordAttribute.registerTransform(String, {
     allow null through as that will be checked separately
   */
   to: function(obj) {
-    if (!(typeof obj === 'string') && !Ember.none(obj) && obj.toString) {
+    if ((typeof obj !== 'string') && !Ember.none(obj) && obj.toString) {
       obj = obj.toString();
     }
     return obj;
@@ -4886,7 +4870,7 @@ Ember.RecordAttribute.registerTransform(Array, {
 Ember.RecordAttribute.registerTransform(Object, {
   /** @private - check if obj is an object */
   to: function(obj) {
-    if (!(typeof obj === 'object') && !Ember.none(obj)) {
+    if ((typeof obj !== 'object') && !Ember.none(obj)) {
       obj = {};
     }
     return obj;
@@ -5056,13 +5040,11 @@ Ember.RecordAttribute.registerTransform(Ember.Set, {
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2010 Evin Grano
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
 var get = Ember.get, set = Ember.set;
 
 /** @class
@@ -5078,10 +5060,9 @@ var get = Ember.get, set = Ember.set;
       contacts: Ember.ChildAttribute.attr('Ember.Child');
 
   @extends Ember.RecordAttribute
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
-Ember.ChildAttribute = Ember.RecordAttribute.extend(
-  /** @scope Ember.ChildAttribute.prototype */ {
+Ember.ChildAttribute = Ember.RecordAttribute.extend({
 
   isNestedRecordTransform: YES,
 
@@ -5166,7 +5147,7 @@ Ember.ChildAttribute = Ember.RecordAttribute.extend(
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember - JavaScript Application Framework
 // Copyright: ©2010 Evin Grano
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
@@ -5181,7 +5162,7 @@ var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
 
   @extends Ember.Enumerable
   @extends Ember.Array
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 
 Ember.ChildArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.MutableEnumerable, Ember.MutableArray,
@@ -5360,7 +5341,7 @@ Ember.ChildArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.Muta
       if (me instanceof Ember.Record) {
         store = get(me, 'store');
         sk = get(me, 'storeKey');
-        if (sk) recs[idx] = store.readDataHash(sk);
+        if (sk) { recs[idx] = store.readDataHash(sk); }
       }
     });
 
@@ -5372,7 +5353,7 @@ Ember.ChildArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.Muta
   */
   normalize: function(){
     this.forEach(function(child,id){
-      if(child.normalize) child.normalize();
+      if (child.normalize) { child.normalize(); }
     });
   },
 
@@ -5441,48 +5422,41 @@ Ember.ChildArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.Muta
     this.recordPropertyDidChange();
   }
 
-}) ;
-
+});
 
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2010 Evin Grano
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
-
-
 var get = Ember.get, set = Ember.set;
 
 /** @class
-  
-  ChildrenAttribute is a subclass of ChildAttribute and handles to-many 
+
+  ChildrenAttribute is a subclass of ChildAttribute and handles to-many
   relationships for child records.
-  
+
   When setting ( `set()` ) the value of a toMany attribute, make sure
   to pass in an array of Ember.Record objects.
-  
+
   There are many ways you can configure a ChildrenAttribute:
-  
+
       contacts: Ember.ChildrenAttribute.attr('Ember.Child');
-  
+
   @extends Ember.RecordAttribute
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
-Ember.ChildrenAttribute = Ember.ChildAttribute.extend(
-  /** @scope Ember.ChildrenAttribute.prototype */ {
-    
+Ember.ChildrenAttribute = Ember.ChildAttribute.extend({
+
   // ..........................................................
   // LOW-LEVEL METHODS
   //
-  
+
   /**  @private - adapted for to many relationship */
   toType: function(record, key, value) {
     var attrKey   = get(this, 'key') || key,
@@ -5490,10 +5464,10 @@ Ember.ChildrenAttribute = Ember.ChildAttribute.extend(
         ret       = record[arrayKey],
         recordType  = get(this, 'typeClass'), rel;
 
-    // lazily create a ManyArray one time.  after that always return the 
+    // lazily create a ManyArray one time.  after that always return the
     // same object.
     if (!ret) {
-      ret = Ember.ChildArray.create({ 
+      ret = Ember.ChildArray.create({
         record:         record,
         propertyName:   attrKey,
         defaultRecordType: recordType
@@ -5507,17 +5481,17 @@ Ember.ChildrenAttribute = Ember.ChildAttribute.extend(
 
     return ret;
   },
-  
+
   // Default fromType is just returning itself
   fromType: function(record, key, value){
-    var sk, store, 
+    var sk, store,
         arrayKey = '__kidsArray__'+Ember.guidFor(this),
         ret = record[arrayKey];
     if (record) {
       record.writeAttribute(key, value);
       if (ret) ret = ret.recordPropertyDidChange();
     }
-    
+
     return ret;
   }
 });
@@ -5529,12 +5503,11 @@ Ember.ChildrenAttribute = Ember.ChildAttribute.extend(
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
 var get = Ember.get, set = Ember.set, attrFor = Ember.RecordAttribute.attrFor;
 
 /**
@@ -5549,7 +5522,7 @@ var get = Ember.get, set = Ember.set, attrFor = Ember.RecordAttribute.attrFor;
 
   @extends Ember.Enumerable
   @extends Ember.Array
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 
 Ember.ManyArray = Ember.Object.extend(Ember.Enumerable, Ember.MutableEnumerable, Ember.MutableArray, Ember.Array,
@@ -5994,22 +5967,18 @@ Ember.ManyArray = Ember.Object.extend(Ember.Enumerable, Ember.MutableEnumerable,
     this.recordPropertyDidChange();
   }
 
-}) ;
-
+});
 
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
 var get = Ember.get, set = Ember.set;
 
 /** @class
@@ -6031,7 +6000,7 @@ var get = Ember.get, set = Ember.set;
       });
 
   @extends Ember.RecordAttribute
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.ManyAttribute = Ember.RecordAttribute.extend(
   /** @scope Ember.ManyAttribute.prototype */ {
@@ -6160,13 +6129,11 @@ Ember.ManyAttribute = Ember.RecordAttribute.extend(
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
 var get = Ember.get, set = Ember.set;
 var RecordAttribute_call = get(Ember.RecordAttribute, 'proto').call;
 var attrFor = Ember.RecordAttribute.attrFor;
@@ -6186,7 +6153,7 @@ var attrFor = Ember.RecordAttribute.attrFor;
       });
 
   @extends Ember.RecordAttribute
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.SingleAttribute = Ember.RecordAttribute.extend(
   /** @scope Ember.SingleAttribute.prototype */ {
@@ -6322,27 +6289,21 @@ Ember.SingleAttribute = Ember.RecordAttribute.extend(
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore DataStore
+// Project:   Ember DataStore
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
-
-
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
 /**
   Indicates a value has a mixed state of both on and off.
 
@@ -6369,7 +6330,7 @@ Ember.MIXED_STATE = '__MIXED__';
 
   ## Connect to a Data Source
 
-  New SproutCore applications are wired up to fixtures as their data source.
+  New Ember applications are wired up to fixtures as their data source.
   When you are ready to connect to a server, swap the use of fixtures with a
   call to the desired data source.
 
@@ -6545,9 +6506,9 @@ Ember.MIXED_STATE = '__MIXED__';
   (or a promise to provide store keys) that comprises the result set.
 
   @extend Ember.Object
-  @since SproutCore 1.0
+  @since Ember DataStore 0.9
 */
-Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */ {
+Ember.DataSource = Ember.Object.extend({
 
   // ..........................................................
   // Ember.STORE ENTRY POINTS
@@ -6621,7 +6582,7 @@ Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */
     @returns {Boolean} YES if you can handle fetching the query, NO otherwise
   */
   fetch: function(store, query) {
-    return NO ; // do not handle anything!
+    return NO; // do not handle anything!
   },
 
   /**
@@ -6789,19 +6750,19 @@ Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */
   _handleEach: function(store, storeKeys, action, ids, params) {
     var len = storeKeys.length, idx, ret, cur, idOrParams;
 
-    for(idx=0;idx<len;idx++) {
+    for (idx=0;idx<len;idx++) {
       idOrParams = ids ? ids[idx] : params;
 
       cur = action.call(this, store, storeKeys[idx], idOrParams);
       if (ret === undefined) {
         ret = cur ;
       } else if (ret === YES) {
-        ret = (cur === YES) ? YES : Ember.MIXED_STATE ;
+        ret = (cur === YES) ? YES : Ember.MIXED_STATE;
       } else if (ret === NO) {
-        ret = (cur === NO) ? NO : Ember.MIXED_STATE ;
+        ret = (cur === NO) ? NO : Ember.MIXED_STATE;
       }
     }
-    return !Ember.none(ret) ? ret : null ;
+    return !Ember.none(ret) ? ret : null;
   },
 
 
@@ -6823,7 +6784,7 @@ Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */
     @returns {Boolean} YES if handled
   */
   updateRecord: function(store, storeKey, params) {
-    return NO ;
+    return NO;
   },
 
   /**
@@ -6835,7 +6796,7 @@ Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */
     @returns {Boolean} YES if handled
   */
   retrieveRecord: function(store, storeKey, id) {
-    return NO ;
+    return NO;
   },
 
   /**
@@ -6852,7 +6813,7 @@ Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */
     @returns {Boolean} YES if handled
   */
   createRecord: function(store, storeKey, params) {
-    return NO ;
+    return NO;
   },
 
   /**
@@ -6869,24 +6830,21 @@ Ember.DataSource = Ember.Object.extend( /** @scope Ember.DataSource.prototype */
     @returns {Boolean} YES if handled
   */
   destroyRecord: function(store, storeKey, params) {
-    return NO ;
+    return NO;
   }
 
 });
-
 
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
 var get = Ember.get, set = Ember.set;
 
 /** @class
@@ -6931,10 +6889,9 @@ var get = Ember.get, set = Ember.set;
   will cascade.
 
   @extends Ember.DataSource
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
-Ember.CascadeDataSource = Ember.DataSource.extend(
-  /** @scope Ember.CascadeDataSource.prototype */ {
+Ember.CascadeDataSource = Ember.DataSource.extend({
 
   /**
     The data sources used by the cascade, in the order that they are to be
@@ -6956,7 +6913,7 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
     var dataSources = get(this, 'dataSources');
     if (!dataSources) set(this, 'dataSources', dataSources = []);
     dataSources.push(dataSource);
-    return this ;
+    return this;
   },
 
   // ..........................................................
@@ -6970,13 +6927,13 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
         ret     = NO,
         cur, source, idx;
 
-    for(idx=0; (ret !== YES) && idx<len; idx++) {
+    for (idx=0; (ret !== YES) && idx<len; idx++) {
       source = sources.objectAt(idx);
       cur = source.fetch ? source.fetch.apply(source, arguments) : NO;
       ret = this._handleResponse(ret, cur);
     }
 
-    return ret ;
+    return ret;
   },
 
 
@@ -6987,13 +6944,13 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
         ret     = NO,
         cur, source, idx;
 
-    for(idx=0; (ret !== YES) && idx<len; idx++) {
+    for (idx=0; (ret !== YES) && idx<len; idx++) {
       source = sources.objectAt(idx);
       cur = source.retrieveRecords.apply(source, arguments);
       ret = this._handleResponse(ret, cur);
     }
 
-    return ret ;
+    return ret;
   },
 
   /** @private - just cascades */
@@ -7003,13 +6960,13 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
         ret     = NO,
         cur, source, idx;
 
-    for(idx=0; (ret !== YES) && idx<len; idx++) {
+    for (idx=0; (ret !== YES) && idx<len; idx++) {
       source = sources.objectAt(idx);
       cur = source.commitRecords.apply(source, arguments);
       ret = this._handleResponse(ret, cur);
     }
 
-    return ret ;
+    return ret;
   },
 
   /** @private - just cascades */
@@ -7019,13 +6976,13 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
         ret     = NO,
         cur, source, idx;
 
-    for(idx=0; (ret !== YES) && idx<len; idx++) {
+    for (idx=0; (ret !== YES) && idx<len; idx++) {
       source = sources.objectAt(idx);
       cur = source.cancel.apply(source, arguments);
       ret = this._handleResponse(ret, cur);
     }
 
-    return ret ;
+    return ret;
   },
 
   // ..........................................................
@@ -7041,7 +6998,7 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
     var sources = get(this, 'dataSources'),
         idx     = sources ? get(sources, 'length') : 0,
         source;
-    while(--idx>=0) {
+    while (--idx>=0) {
       source = sources[idx];
       if (Ember.typeOf(source) === 'string') sources[idx] = get(this, source);
     }
@@ -7051,8 +7008,8 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
   /** @private - Determine the proper return value. */
   _handleResponse: function(current, response) {
     if (response === YES) return YES ;
-    else if (current === NO) return (response === NO) ? NO : Ember.MIXED_STATE ;
-    else return Ember.MIXED_STATE ;
+    else if (current === NO) return (response === NO) ? NO : Ember.MIXED_STATE;
+    else return Ember.MIXED_STATE;
   }
 
 });
@@ -7063,15 +7020,11 @@ Ember.CascadeDataSource = Ember.DataSource.extend(
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
-
 var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
 
 /** @class
@@ -7079,10 +7032,9 @@ var get = Ember.get, set = Ember.set, getPath = Ember.getPath;
   TODO: Describe Class
 
   @extends Ember.DataSource
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
-Ember.FixturesDataSource = Ember.DataSource.extend(
-  /** @scope Ember.FixturesDataSource.prototype */ {
+Ember.FixturesDataSource = Ember.DataSource.extend({
 
   /**
     If YES then the data source will asynchronously respond to data requests
@@ -7190,7 +7142,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
       }, latency);
     } else this._retrieveRecords(store, storeKeys);
 
-    return ret ;
+    return ret;
   },
 
   _retrieveRecords: function(store, storeKeys) {
@@ -7224,7 +7176,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
       }, latency);
     } else this._updateRecords(store, storeKeys);
 
-    return ret ;
+    return ret;
   },
 
   _updateRecords: function(store, storeKeys) {
@@ -7253,7 +7205,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
       }, latency);
     } else this._createRecords(store, storeKeys);
 
-    return YES ;
+    return YES;
   },
 
   _createRecords: function(store, storeKeys) {
@@ -7290,7 +7242,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
       }, latency);
     } else this._destroyRecords(store, storeKeys);
 
-    return ret ;
+    return ret;
   },
 
 
@@ -7336,7 +7288,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
     // only load records that were not already loaded to avoid infinite loops
     if (hashes && hashes.length>0) store.loadRecords(recordType, hashes);
 
-    return this ;
+    return this;
   },
 
 
@@ -7382,7 +7334,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
         fixtures   = this.fixturesFor(recordType);
     this._invalidateCachesFor(recordType, storeKey, id);
     fixtures[id] = dataHash;
-    return this ;
+    return this;
   },
 
   /**
@@ -7445,7 +7397,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
       }
     }, this);
 
-    return ret ;
+    return ret;
   },
 
   /** @private
@@ -7461,7 +7413,7 @@ Ember.FixturesDataSource = Ember.DataSource.extend(
   _invalidateCachesFor: function(recordType, storeKey, id) {
     var cache = this._storeKeyCache;
     if (cache) delete cache[Ember.guidFor(recordType)];
-    return this ;
+    return this;
   }
 
 });
@@ -7479,28 +7431,21 @@ Ember.Record.fixtures = Ember.FixturesDataSource.create();
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore DataStore
+// Project:   Ember DataStore
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
-
 var get = Ember.get, set = Ember.set;
 
 /**
@@ -7546,7 +7491,7 @@ var get = Ember.get, set = Ember.set;
   @extends Ember.Object
   @extends Ember.Enumerable
   @extends Ember.Array
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 
 Ember.RecordArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.MutableEnumerable, Ember.MutableArray,
@@ -7969,7 +7914,7 @@ Ember.RecordArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.Mut
     @returns {Ember.RecordArray} receiver
   */
   flush: function(_flush) {
-    
+
     // Are we already inside a flush?  If so, then don't do it again, to avoid
     // never-ending recursive flush calls.  Instead, we'll simply mark
     // ourselves as needing a flush again when we're done.
@@ -7980,7 +7925,7 @@ Ember.RecordArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.Mut
 
     if (!get(this, 'needsFlush') && !_flush) return this; // nothing to do
     set(this, 'needsFlush', NO); // avoid running again.
-    
+
     // fast exit
     var query = get(this, 'query'),
         store = get(this, 'store');
@@ -8224,7 +8169,7 @@ Ember.RecordArray = Ember.Object.extend(Ember.Enumerable, Ember.Array, Ember.Mut
   _storeKeysContentWillChange: function(target, start, removedCount, addedCount) {
     this.arrayContentWillChange(start, removedCount, addedCount);
   },
-  
+
   /** @private
     Invoked whenever the content of the `storeKeys` array changes.  This will
     dump any cached record lookup and then notify that the enumerable content
@@ -8269,16 +8214,11 @@ Ember.RecordArray.reopenClass(/** @scope Ember.RecordArray.prototype */{
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals ember_assert */
-
-
-
-
 var get = Ember.get, set = Ember.set, getPath = Ember.getPath, none = Ember.none;
 
 /**
@@ -8298,7 +8238,7 @@ var get = Ember.get, set = Ember.set, getPath = Ember.getPath, none = Ember.none
   be a server, local storage, or any other persistent code.
 
   @extends Ember.Object
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
 
@@ -8410,15 +8350,13 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
   */
   chain: function(attrs, newStoreClass) {
     if (!attrs) attrs = {};
-    
+
     attrs.parentStore = this;
     if (!newStoreClass) newStoreClass = Ember.NestedStore;
 
     // Ensure the passed-in class is a type of nested store.
-    ember_assert("%@ is a valid class".fmt(newStoreClass), 
-      Ember.typeOf(newStoreClass) === 'class');
-    ember_assert("%@ is a type of Ember.NestedStore".fmt(newStoreClass),
-      Ember.NestedStore.detect(newStoreClass));
+    ember_assert("%@ is a valid class".fmt(newStoreClass), Ember.typeOf(newStoreClass) === 'class');
+    ember_assert("%@ is a type of Ember.NestedStore".fmt(newStoreClass), Ember.NestedStore.detect(newStoreClass));
 
     // Replicate parent records references
     attrs.childRecords = this.childRecords ? Ember.copy(this.childRecords) : {};
@@ -8774,11 +8712,11 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
     }
 
     var that = this;
-    
+
     function iter(storeKey){
       that.dataHashDidChange(storeKey, null, statusOnly, key);
     }
-    
+
     for(idx=0;idx<len;idx++) {
       if (isArray) storeKey = storeKeys[idx];
       this.revisions[storeKey] = rev;
@@ -9119,13 +9057,12 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
 
     // handle passing a query...
     if (id === undefined && !(recordType instanceof Ember.Record)) {
-      ember_assert('Ember.Store#find() accepts only a record type of query', 
-        Ember.Record.detect(recordType) || recordType instanceof Ember.Query);
+      ember_assert('Ember.Store#find() accepts only a record type of query', Ember.Record.detect(recordType) || recordType instanceof Ember.Query);
 
       if (!(recordType instanceof Ember.Query)) {
         recordType = Ember.Query.local(recordType);
       }
-      
+
       return this._findQuery(recordType, YES, YES);
 
     // handle finding a single record
@@ -9138,15 +9075,15 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
     DEPRECATED used find() instead.
 
     This method will accept a record type or query and return a record array
-    matching the results.  This method was commonly used prior to SproutCore
+    matching the results.  This method was commonly used prior to Ember
     1.0.  It has been deprecated in favor of a single `find()` method instead.
 
-    For compatibility, this method will continue to work in SproutCore 1.0 but
+    For compatibility, this method will continue to work in Ember 1.0 but
     it will raise a warning.  It will be removed in a future version of
-    SproutCore.
+    Ember.
   */
   findAll: function(recordType, conditions, params) {
-    Ember.Logger.warn("Ember.Store#findAll() will be removed in a future version of SproutCore.  Use Ember.Store#find() instead");
+    Ember.Logger.warn("Ember.Store#findAll() will be removed in a future version of Ember.  Use Ember.Store#find() instead");
 
 
     if (!recordType || !recordType.isQuery) {
@@ -9578,8 +9515,12 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
     changelog = this.changelog;
     if (!changelog) changelog = this.changelog = Ember.Set.create();
 
-    ((status & K.DIRTY) ? changelog.add(storeKey) : changelog.remove(storeKey));
-    this.changelog=changelog;
+    if (status & K.DIRTY) {
+      changelog.add(storeKey);
+    } else {
+      changelog.remove(storeKey);
+    }
+    this.changelog = changelog;
 
     // if commit records is enabled
     if(get(this, 'commitRecordsAutomatically')){
@@ -10234,7 +10175,7 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
     The return value will be the `storeKey` used for the push.  This is often
     convenient to pass into `loadQuery()`, if you are fetching a remote query.
 
-    If you are upgrading from a pre SproutCore 1.0 application, this method
+    If you are upgrading from a pre Ember 1.0 application, this method
     is the closest to the old `updateRecord()`.
 
     @param {Ember.Record} recordType the record type
@@ -10280,7 +10221,7 @@ Ember.Store = Ember.Object.extend( /** @scope Ember.Store.prototype */ {
     The return value will be the storeKeys used for each push.  This is often
     convenient to pass into `loadQuery()`, if you are fetching a remote query.
 
-    If you are upgrading from a pre SproutCore 1.0 application, this method
+    If you are upgrading from a pre Ember 1.0 application, this method
     is the closest to the old `updateRecords()`.
 
     @param {Ember.Record} recordTypes the record type or array of record types
@@ -11053,106 +10994,16 @@ Ember.Store.reopen({
   nextStoreIndex: 1
 });
 
-// ..........................................................
-// COMPATIBILITY
-//
-
-/** @private
-  global store is used only for deprecated compatibility methods.  Don't use
-  this in real code.
-*/
-Ember.Store._getDefaultStore = function() {
-  var store = this._store;
-  if(!store) this._store = store = Ember.Store.create();
-  return store;
-};
-
-/** @private
-
-  DEPRECATED
-
-  Included for compatibility, loads data hashes with the named `recordType`.
-  If no `recordType` is passed, expects to find a `recordType` property in the
-  data hashes.  `dataSource` and `isLoaded` params are ignored.
-
-  Calls `Ember.Store#loadRecords()` on the default store. Do not use this method in
-  new code.
-
-  @param {Array} dataHashes data hashes to import
-  @param {Object} dataSource ignored
-  @param {Ember.Record} recordType default record type
-  @param {Boolean} isLoaded ignored
-  @returns {Array} Ember.Record instances for loaded data hashes
-*/
-Ember.Store.updateRecords = function(dataHashes, dataSource, recordType, isLoaded) {
-
-  Ember.Logger.warn("Ember.Store.updateRecords() is deprecated.  Use loadRecords() instead");
-
-  var store = this._getDefaultStore(),
-      len   = dataHashes.length,
-      idx, ret;
-
-  // if no recordType was passed, build an array of recordTypes from hashes
-  if (!recordType) {
-    recordType = [];
-    for(idx=0;idx<len;idx++) recordType[idx] = dataHashes[idx].recordType;
-  }
-
-  // call new API.  Returns storeKeys
-  ret = store.loadRecords(recordType, dataHashes);
-
-  // map to Ember.Record instances
-  len = ret.length;
-  for(idx=0;idx<len;idx++) ret[idx] = store.materializeRecord(ret[idx]);
-
-  return ret ;
-};
-
-/** @private
-
-  DEPRECATED
-
-  Finds a record with the passed guid on the default store.  This is included
-  only for compatibility.  You should use the newer `find()` method defined on
-  `Ember.Store` instead.
-
-  @param {String} guid the guid
-  @param {Ember.Record} recordType expected record type
-  @returns {Ember.Record} found record
-*/
-Ember.Store.find = function(guid, recordType) {
-  return this._getDefaultStore().find(recordType, guid);
-};
-
-/** @private
-
-  DEPRECATED
-
-  Passes through to `findAll` on default store.  This is included only for
-  compatibility.  You should use the newer `findAll()` defined on `Ember.Store`
-  instead.
-
-  @param {Hash} filter search parameters
-  @param {Ember.Record} recordType type of record to find
-  @returns {Ember.RecordArray} result set
-*/
-Ember.Store.findAll = function(filter, recordType) {
-  return this._getDefaultStore().findAll(filter, recordType);
-};
-
-
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore - JavaScript Application Framework
+// Project:   Ember DataStore - JavaScript Application Framework
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals ember_assert */
-
 var get = Ember.get, set = Ember.set;
 
 var o_create = Ember.platform.create;
@@ -11170,7 +11021,7 @@ var o_create = Ember.platform.create;
   working with the nested store, `destroy()` will dispose of it.
 
   @extends Ember.Store
-  @since SproutCore 1.0
+  @since Ember 1.0
 */
 Ember.NestedStore = Ember.Store.extend(
 /** @scope Ember.NestedStore.prototype */ {
@@ -11267,8 +11118,7 @@ Ember.NestedStore = Ember.Store.extend(
     @returns {Ember.Record|Ember.RecordArray}
   */
   find: function(query) {
-    ember_assert("Ember.Store#find() can only accept LOCAL queries in nested stores",
-      !query || !(query instanceof Ember.Query) || get(query, 'location') === Ember.Query.LOCAL);
+    ember_assert("Ember.Store#find() can only accept LOCAL queries in nested stores", !query || !(query instanceof Ember.Query) || get(query, 'location') === Ember.Query.LOCAL);
     return this._super.apply(this, arguments);
   },
 
@@ -11427,7 +11277,7 @@ Ember.NestedStore = Ember.Store.extend(
 
     // already locked -- nothing to do
     if (locks && locks[storeKey]) return this;
-    
+
     // create locks if needed
     if (!locks) locks = this.locks = [];
 
@@ -11447,9 +11297,9 @@ Ember.NestedStore = Ember.Store.extend(
     if (pstore && editState === Ember.Store.EDITABLE) {
 
       pk = this.childRecords[storeKey];
-      if (pk){        
-        // Since this is a nested record we have to actually walk up the 
-        // parent chain to get to the root parent and clone that hash. And 
+      if (pk) {
+        // Since this is a nested record we have to actually walk up the
+        // parent chain to get to the root parent and clone that hash. And
         // then reconstruct the memory space linking.
         this._lock(pk);
         pr = this.parentRecords[pk];
@@ -11547,7 +11397,7 @@ Ember.NestedStore = Ember.Store.extend(
 
   /** @private - bookkeeping for a single data hash. */
   dataHashDidChange: function(storeKeys, rev, statusOnly, key) {
-    
+
     // update the revision for storeKey.  Use generateStoreKey() because that
     // gaurantees a universally (to this store hierarchy anyway) unique
     // key value.
@@ -11756,7 +11606,7 @@ Ember.NestedStore = Ember.Store.extend(
     throw Ember.Store.NESTED_STORE_UNSUPPORTED_ERROR;
   }
 
-}) ;
+});
 
 
 })({});
@@ -11764,31 +11614,19 @@ Ember.NestedStore = Ember.Store.extend(
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore DataStore
+// Project:   Ember DataStore
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
-
-
-
-
-
 })({});
 
 
 (function(exports) {
 // ==========================================================================
-// Project:   SproutCore DataStore
+// Project:   Ember DataStore
 // Copyright: ©2006-2011 Strobe Inc. and contributors.
 //            Portions ©2008-2011 Apple Inc. All rights reserved.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-
-
-
-
 })({});

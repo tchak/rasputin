@@ -25,7 +25,7 @@ Examples :
     todos/templates/collection.hbs >> Ember.TEMPLATES['todos/collection']
 
 If you want to keep using old naming scheme, put this in your rails configuration block :
-    
+
     config.rasputin.template_name_separator = '_'
 
 The new default is '/'
@@ -43,7 +43,7 @@ If you use Slim templates, you can use handlebars filter :
         {{view Ember.Button}}OK{{/view}}
 
 It will be translated as :
-    
+
     <script type="text/x-handlebars">
         {{view Ember.Button}}OK{{/view}}
     </script>
@@ -59,7 +59,7 @@ In your javascript asset manifest (app/assets/javascripts/application.js) add th
 
     //= require jquery
     //= require ember
-    
+
 And any of the following you want to include:
 
     //= require ember-datetime
@@ -76,6 +76,10 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.11.3
+
+* update Ember.js to 0.9.3 and clean up ember-datastore
 
 0.11.2
 
