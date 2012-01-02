@@ -7,7 +7,7 @@ It provide direct requires for official ember packages :
 
 * ember
 * ember-datetime
-* ember-datastore
+* ember-data
 * ember-touch
 * ember-routing
 
@@ -63,7 +63,7 @@ In your javascript asset manifest (app/assets/javascripts/application.js) add th
 And any of the following you want to include:
 
     //= require ember-datetime
-    //= require ember-datastore
+    //= require ember-data
     //= require ember-touch
     //= require ember-routing
     //= require ember-i18n
@@ -76,6 +76,10 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.12.0
+
+* replace ember-datastore with ember-data
 
 0.11.3
 
