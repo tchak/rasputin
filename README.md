@@ -3,20 +3,17 @@ Rasputin
 
 This is a gem for integration of Ember.js with Rails 3.1 assets pipeline.
 
-It provide direct requires for official ember packages :
+It provide direct requires for following ember packages :
 
 * ember
 * ember-datetime
 * ember-data
 * ember-touch
 * ember-routing
-
-And it also provides one unnoficial package :
-
 * ember-i18n (integration with i18n-js gem)
 
 Rasputin also provide sprockets engine for handlebars templates. Any template in your
-javascript assets folder with extention handlebars will be availabel in sproutcore.
+javascript assets folder with extention `handlebars` or `hbs` will be availabel in ember.
 
 Examples :
 
@@ -33,6 +30,7 @@ The new default is '/'
 Precompilation :
 
 Starting with 0.9.0 release, Rasputin will precompile your handlebars templates.
+Starting with 0.12.1 release, default behavior is to precompile templates only in production environment.
 If you do not want this behavior you can tourn it off in your rails configuration block :
 
     config.rasputin.precompile_handlebars = false
@@ -64,7 +62,6 @@ And any of the following you want to include:
 
     //= require ember-datetime
     //= require ember-data
-    //= require ember-touch
     //= require ember-routing
     //= require ember-i18n
 
@@ -76,6 +73,12 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.12.1
+
+* new precompiler (borrowed from @keithpitt)
+* default behavior is to precompil only in production environment
+* haml filter (thanks @ootoovak)
 
 0.12.0
 
