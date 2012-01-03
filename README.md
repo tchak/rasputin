@@ -37,7 +37,7 @@ If you do not want this behavior you can tourn it off in your rails configuratio
 
     config.rasputin.precompile_handlebars = false
 
-If you use Slim templates, you can use handlebars filter :
+If you use Slim of Haml templates, you can use handlebars filter :
 
     handlebars:
         {{view Ember.Button}}OK{{/view}}
