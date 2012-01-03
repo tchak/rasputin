@@ -48,18 +48,17 @@ It will be translated as :
 
 Preprocessor :
 
-If you chouse to use "native require" your application.js file will look like this :
+If you chouse to use "javascript native require" your application.js file will look like this :
 
     require('jquery');
     require('ember');
     require('ember-data');
+    require('app/**/*');
 
 Ther is two new settings :
 
-    config.rasputin.use_javascript_requires
-    config.rasputin.strip_javascript_requires
-
-By default the second one is true when in production environment
+    config.rasputin.use_javascript_requires = true
+    config.rasputin.strip_javascript_requires = true
 
 Install
 -------
@@ -91,7 +90,7 @@ ChangeLog
 
 0.13.0
 
-* new preprocessor for "javascript native" require (WIP)
+* new preprocessor for "javascript native require" (WIP)
 
 0.12.1
 

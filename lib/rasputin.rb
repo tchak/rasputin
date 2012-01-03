@@ -17,7 +17,7 @@ module Rasputin
     config.rasputin.template_name_separator = '/'
 
     config.rasputin.use_javascript_requires = true
-    config.rasputin.strip_javascript_requires = Rails.env.production?
+    config.rasputin.strip_javascript_requires = true
 
     initializer :setup_rasputin do |app|
       app.assets.register_preprocessor 'application/javascript', Rasputin::RequirePreprocessor
