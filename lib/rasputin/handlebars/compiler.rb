@@ -4,12 +4,20 @@ module Rasputin
   module Handlebars
     module Source
 
+      def self.precompiler_path
+        assets_path("ember-precompiler.js")
+      end
+
+      def self.assets_path(name)
+        File.expand_path(File.join(__FILE__, "..", "..", "..", "..", "vendor/assets/javascripts/#{name}"))
+      end
+
       def self.bundled_path
-        File.expand_path("../handlebars.js", __FILE__)
+        assets_path("ember.js")
       end
 
       def self.path
-        @path ||= ENV["HANDLEBARS_SOURCE_PATH"] || bundled_path
+        @path ||= ENV["EMBER_SOURCE_PATH"] || bundled_path
       end
 
       def self.path=(path)
@@ -18,7 +26,7 @@ module Rasputin
       end
 
       def self.contents
-        @contents ||= File.read(path)
+        @contents ||= [File.read(precompiler_path), File.read(path)].join("\n")
       end
 
       def self.version
@@ -37,7 +45,7 @@ module Rasputin
 
       def compile(template)
         template = template.read if template.respond_to?(:read)
-        Source.context.call("Ember.Handlebars.precompile", template)
+        Source.context.call("EmberHandlebars.precompile", template)
       end
     end
   end
