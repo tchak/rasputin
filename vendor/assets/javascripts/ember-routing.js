@@ -1,33 +1,13 @@
-// ==========================================================================
-// Project:   Ember - JavaScript Application Framework
-// Copyright: ©2006-2011 Strobe Inc. and contributors.
-//            Portions ©2008-2011 Apple Inc. All rights reserved.
-// License:   Licensed under MIT license (see license.js)
-// ==========================================================================
 
-(function() {
-
-var get = Ember.get, set = Ember.set;
-
-/**
-  Wether the browser supports HTML5 history.
-*/
-var supportsHistory = !!(window.history && window.history.pushState);
-
-/**
-  Wether the browser supports the hashchange event.
-*/
-var supportsHashChange = ('onhashchange' in window) && (document.documentMode === undefined || document.documentMode > 7);
-
+(function(exports) {
 /**
   @class
 
-  Route is a class used internally by Ember.routes. The routes defined by your
+  Route is a class used internally by Ember.RoutesManager. The routes defined by your
   application are stored in a tree structure, and this is the class for the
   nodes.
 */
-var Route = Ember.Object.extend(
-/** @scope Route.prototype */ {
+Ember.Route = Ember.Object.extend({
 
   target: null,
 
@@ -59,7 +39,7 @@ var Route = Ember.Object.extend(
       case ':':
         part = part.slice(1, part.length);
         if (!this.dynamicRoutes) this.dynamicRoutes = {};
-        if (!this.dynamicRoutes[part]) this.dynamicRoutes[part] = this.constructor.create();
+        if (!this.dynamicRoutes[part]) this.dynamicRoutes[part] = Ember.Route.create();
         nextRoute = this.dynamicRoutes[part];
         break;
 
@@ -67,13 +47,13 @@ var Route = Ember.Object.extend(
       case '*':
         part = part.slice(1, part.length);
         if (!this.wildcardRoutes) this.wildcardRoutes = {};
-        nextRoute = this.wildcardRoutes[part] = this.constructor.create();
+        nextRoute = this.wildcardRoutes[part] = Ember.Route.create();
         break;
 
       // 3. static routes
       default:
         if (!this.staticRoutes) this.staticRoutes = {};
-        if (!this.staticRoutes[part]) this.staticRoutes[part] = this.constructor.create();
+        if (!this.staticRoutes[part]) this.staticRoutes[part] = Ember.Route.create();
         nextRoute = this.staticRoutes[part];
       }
 
@@ -97,33 +77,56 @@ var Route = Ember.Object.extend(
 
       // try to match a static route
       if (this.staticRoutes && this.staticRoutes[part]) {
-        return this.staticRoutes[part].routeForParts(parts, params);
-
-      } else {
-
-        // else, try to match a dynamic route
-        for (key in this.dynamicRoutes) {
-          route = this.dynamicRoutes[key].routeForParts(parts, params);
-          if (route) {
-            params[key] = part;
-            return route;
-          }
+        route = this.staticRoutes[part].routeForParts(parts, params);
+        if (route) {
+          return route;
         }
-
-        // else, try to match a wilcard route
-        for (key in this.wildcardRoutes) {
-          parts.unshift(part);
-          params[key] = parts.join('/');
-          return this.wildcardRoutes[key].routeForParts(null, params);
-        }
-
-        // if nothing was found, it means that there is no match
-        return null;
       }
+
+      // else, try to match a dynamic route
+      for (key in this.dynamicRoutes) {
+        route = this.dynamicRoutes[key].routeForParts(parts, params);
+        if (route) {
+          params[key] = part;
+          return route;
+        }
+      }
+
+      // else, try to match a wilcard route
+      for (key in this.wildcardRoutes) {
+        parts.unshift(part);
+        params[key] = parts.join('/');
+        return this.wildcardRoutes[key].routeForParts(null, params);
+      }
+
+      // if nothing was found, it means that there is no match
+      return null;
     }
   }
 
 });
+
+})({});
+
+
+(function(exports) {
+// ==========================================================================
+// Project:   Ember - JavaScript Application Framework
+// Copyright: ©2006-2011 Strobe Inc. and contributors.
+//            Portions ©2008-2011 Apple Inc. All rights reserved.
+// License:   Licensed under MIT license (see license.js)
+// ==========================================================================
+var get = Ember.get, set = Ember.set;
+
+/**
+  Wether the browser supports HTML5 history.
+*/
+var supportsHistory = !!(window.history && window.history.pushState);
+
+/**
+  Wether the browser supports the hashchange event.
+*/
+var supportsHashChange = ('onhashchange' in window) && (document.documentMode === undefined || document.documentMode > 7);
 
 /**
   @class
@@ -157,8 +160,7 @@ var Route = Ember.Object.extend(
   Ember.routes also supports HTML5 history, which uses a '/' instead of a '#'
   in the URLs, so that all your website's URLs are consistent.
 */
-var routes = Ember.routes = Ember.Object.create(
-  /** @scope Ember.routes.prototype */{
+Ember.RoutesManager = Ember.Object.extend({
 
   /**
     Set this property to true if you want to use HTML5 history, if available on
@@ -178,7 +180,7 @@ var routes = Ember.routes = Ember.Object.create(
 
     You will also need to make sure that baseURI is properly configured, as
     well as your server so that your routes are properly pointing to your
-    SproutCore application.
+    Ember application.
 
     @see http://dev.w3.org/html5/spec/history.html#the-history-interface
     @property
@@ -245,13 +247,6 @@ var routes = Ember.routes = Ember.Object.create(
   _firstRoute: null,
 
   /** @private
-    An internal reference to the Route class.
-
-    @property
-  */
-  _Route: Route,
-
-  /** @private
     Internal method used to extract and merge the parameters of a URL.
 
     @returns {Hash}
@@ -261,7 +256,8 @@ var routes = Ember.routes = Ember.Object.create(
         route = obj.route || '',
         separator, parts, i, len, crumbs, key;
 
-    separator = (route.indexOf('?') < 0 && route.indexOf('&') >= 0) ? '&' : '?';
+    //separator = (route.indexOf('?') < 0 && route.indexOf('&') >= 0) ? '&' : '?';
+    separator = '?';
     parts = route.split(separator);
     route = parts[0];
     if (parts.length === 1) {
@@ -334,16 +330,13 @@ var routes = Ember.routes = Ember.Object.create(
     will change the location to
     http://domain.tld/my_app#notes/show/4?format=xml&language=fr.
 
-    The 'notes/show/4&format=xml&language=fr' syntax for passing parameters,
-    using a '&' instead of a '?', as used in SproutCore 1.0 is still supported.
-
     @property
     @type {String}
   */
-  location: function(key, value) {
+  location: Ember.computed(function(key, value) {
     this._skipRoute = false;
     return this._extractLocation(key, value);
-  }.property(),
+  }).property(),
 
   _extractLocation: function(key, value) {
     var crumbs, encodedValue;
@@ -358,7 +351,7 @@ var routes = Ember.routes = Ember.Object.create(
         value = crumbs.route + crumbs.params;
       }
 
-      if (!Ember.empty(value) || (this._location && this._location !== value)) {
+      if (!this._skipPush && (!Ember.empty(value) || (this._location && this._location !== value))) {
         encodedValue = encodeURI(value);
 
         if (this.usesHistory) {
@@ -366,7 +359,7 @@ var routes = Ember.routes = Ember.Object.create(
             encodedValue = '/' + encodedValue;
           }
           window.history.pushState(null, null, get(this, 'baseURI') + encodedValue);
-        } else {
+        } else if (encodedValue.length > 0 || window.location.hash.length > 0) {
           window.location.hash = encodedValue;
         }
       }
@@ -377,6 +370,11 @@ var routes = Ember.routes = Ember.Object.create(
     return this._location;
   },
 
+  updateLocation: function(loc){
+    this._skipRoute = true;
+    return this._extractLocation('location', loc);
+  },
+
   /**
     You usually don't need to call this method. It is done automatically after
     the application has been initialized.
@@ -385,33 +383,49 @@ var routes = Ember.routes = Ember.Object.create(
     timer that looks for location changes every 150ms.
   */
   ping: function() {
-    var that;
-
     if (!this._didSetup) {
       this._didSetup = true;
 
+      var state;
       if (get(this, 'wantsHistory') && supportsHistory) {
         this.usesHistory = true;
 
-        popState();
-        jQuery(window).bind('popstate', popState);
+        // Move any hash state to url state
+        // TODO: Make sure we have a hash before adding slash
+        state = window.location.hash.slice(1);
+        if (state.length > 0) {
+          state = '/' + state;
+          window.history.replaceState(null, null, get(this, 'baseURI')+state);
+        }
+
+        popState.call(this);
+        Ember.$(window).bind('popstate', Ember.$.proxy(popState, this));
 
       } else {
         this.usesHistory = false;
 
+        if (get(this, 'wantsHistory')) {
+          // Move any url state to hash
+          var base = get(this, 'baseURI'),
+              loc = (base.charAt(0) === '/') ? document.location.pathname : document.location.href.replace(document.location.hash, '');
+          state = loc.slice(base.length+1);
+          if (state.length > 0) {
+            window.location.href = base+'#'+state;
+          }
+        }
+
         if (supportsHashChange) {
-          hashChange();
-          jQuery(window).bind('hashchange', hashChange);
+          hashChange.call(this);
+          Ember.$(window).bind('hashchange', Ember.$.proxy(hashChange, this));
 
         } else {
           // we don't use a Ember.Timer because we don't want
           // a run loop to be triggered at each ping
-          that = this;
-          this._invokeHashChange = function() {
-            that.hashChange();
-            setTimeout(that._invokeHashChange, 100);
-          };
-          this._invokeHashChange();
+          var invokeHashChange = Ember.$.proxy(function() {
+            hashChange.call(this);
+            setTimeout(invokeHashChange, 100);
+          }, this);
+          invokeHashChange();
         }
       }
     }
@@ -451,7 +465,7 @@ var routes = Ember.routes = Ember.Object.create(
       method = target[method];
     }
 
-    if (!this._firstRoute) this._firstRoute = Route.create();
+    if (!this._firstRoute) this._firstRoute = Ember.Route.create();
     this._firstRoute.add(route.split('/'), target, method);
 
     return this;
@@ -461,9 +475,9 @@ var routes = Ember.routes = Ember.Object.create(
     Observer of the 'location' property that calls the correct route handler
     when the location changes.
   */
-  locationDidChange: function() {
+  locationDidChange: Ember.observer(function() {
     this.trigger();
-  }.observes('location'),
+  }, 'location'),
 
   /**
     Triggers a route even if already in that route (does change the location, if it
@@ -491,8 +505,8 @@ var routes = Ember.routes = Ember.Object.create(
 
   getRoute: function(route, params) {
     var firstRoute = this._firstRoute;
-    if (params == null) {
-      params = {}
+    if (Ember.none(params)) {
+      params = {};
     }
 
     return firstRoute.routeForParts(route.split('/'), params);
@@ -500,10 +514,12 @@ var routes = Ember.routes = Ember.Object.create(
 
   exists: function(route, params) {
     route = this.getRoute(route, params);
-    return route != null && route.method != null;
+    return route !== null && route.method !== null;
   }
 
 });
+
+Ember.routes = Ember.RoutesManager.create();
 
 /**
   Event handler for the hashchange event. Called automatically by the browser
@@ -520,30 +536,33 @@ function hashChange(event) {
     loc = decodeURI(loc);
   }
 
-  if (get(routes, 'location') !== loc && !routes._skipRoute) {
-    Ember.run.once(function() {
-      set(routes, 'location', loc);
+  if (get(this, 'location') !== loc && !this._skipRoute) {
+    Ember.run.once(this, function() {
+      this._skipPush = true;
+      set(this, 'location', loc);
+      this._skipPush = false;
     });
   }
-  routes._skipRoute = false;
+  this._skipRoute = false;
 }
 
 function popState(event) {
-  var base = get(routes, 'baseURI'),
-      loc = document.location.href;
+  var base = get(this, 'baseURI'),
+      loc = (base.charAt(0) === '/') ? document.location.pathname : document.location.href;
 
   if (loc.slice(0, base.length) === base) {
-
     // Remove the base prefix and the extra '/'
     loc = loc.slice(base.length + 1, loc.length);
 
-    if (get(routes, 'location') !== loc && !routes._skipRoute) {
-      Ember.run.once(function() {
-        set(routes, 'location', loc);
+    if (get(this, 'location') !== loc && !this._skipRoute) {
+      Ember.run.once(this, function() {
+        this._skipPush = true;
+        set(this, 'location', loc);
+        this._skipPush = false;
       });
     }
   }
-  routes._skipRoute = false;
+  this._skipRoute = false;
 }
 
-})();
+})({});

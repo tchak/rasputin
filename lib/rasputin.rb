@@ -11,7 +11,7 @@ require "rasputin/haml" if defined? Haml
 module Rasputin
   class Engine < ::Rails::Engine
     config.rasputin = ActiveSupport::OrderedOptions.new
-    config.rasputin.precompile_handlebars = true
+    config.rasputin.precompile_handlebars = Rails.env.production?
     config.rasputin.template_name_separator = '/'
 
     initializer :setup_rasputin do |app|
