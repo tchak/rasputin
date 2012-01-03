@@ -46,6 +46,21 @@ It will be translated as :
         {{view Ember.Button}}OK{{/view}}
     </script>
 
+Preprocessor :
+
+If you chouse to use "native require" your application.js file will look like this :
+
+    require('jquery');
+    require('ember');
+    require('ember-data');
+
+Ther is two new settings :
+
+    config.rasputin.use_javascript_requires
+    config.rasputin.strip_javascript_requires
+
+By default the second one is true when in production environment
+
 Install
 -------
 
@@ -73,6 +88,10 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 
 ChangeLog
 ----------
+
+0.13.0
+
+* new preprocessor for "javascript native" require (WIP)
 
 0.12.1
 
