@@ -16,8 +16,8 @@ module Rasputin
     config.rasputin.precompile_handlebars = Rails.env.production?
     config.rasputin.template_name_separator = '/'
 
-    config.rasputin.use_javascript_requires = true
-    config.rasputin.strip_javascript_requires = true
+    config.rasputin.use_javascript_require = true
+    config.rasputin.strip_javascript_require = true
 
     initializer :setup_rasputin do |app|
       app.assets.register_preprocessor 'application/javascript', Rasputin::RequirePreprocessor

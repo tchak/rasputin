@@ -24,23 +24,32 @@ module Rasputin
     def prepare
       @pathname = Pathname.new(file)
 
-      @header = data[HEADER_PATTERN, 0] || ""
-      @body   = $' || data
-      # Ensure body ends in a new line
-      @body  += "\n" if @body != "" && @body !~ /\n\Z/m
+      @use_javascript_require = Rails.configuration.rasputin.use_javascript_require
+      @strip_javascript_require = Rails.configuration.rasputin.strip_javascript_require
+
+      if @use_javascript_require
+        @header = data[HEADER_PATTERN, 0] || ""
+        @body   = $' || data
+        # Ensure body ends in a new line
+        @body  += "\n" if @body != "" && @body !~ /\n\Z/m
+      else
+        @body = data
+      end
     end
 
     def evaluate(context, locals, &block)
-      if Rails.configuration.rasputin.use_javascript_requires
+      if @use_javascript_require
         @context = context
         process_directives
-      end
 
-      processed_source
+        processed_source
+      else
+        body
+      end
     end
 
     def processed_header
-      if Rails.configuration.rasputin.strip_javascript_requires
+      if @use_javascript_require && @strip_javascript_require
         lineno = 0
         @processed_header ||= header.lines.map { |line|
           lineno += 1
@@ -104,7 +113,7 @@ module Rasputin
     end
 
     # `path/*`
-    def process_require_directory_directive(path=".")
+    def process_require_directory_directive(path)
       if relative?(path)
         # The path must be absolute.
         raise ArgumentError, "require_directory argument must be absolute path"

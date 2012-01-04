@@ -57,8 +57,8 @@ If you chouse to use "javascript native require" your application.js file will l
 
 Ther is two new settings :
 
-    config.rasputin.use_javascript_requires = true
-    config.rasputin.strip_javascript_requires = true
+    config.rasputin.use_javascript_require = true
+    config.rasputin.strip_javascript_require = true
 
 Install
 -------
