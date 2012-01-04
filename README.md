@@ -6,11 +6,7 @@ This is a gem for integration of Ember.js with Rails 3.1 assets pipeline.
 It provide direct requires for following ember packages :
 
 * ember
-* ember-datetime
 * ember-data
-* ember-touch
-* ember-routing
-* ember-i18n (integration with i18n-js gem)
 
 Rasputin also provide sprockets engine for handlebars templates. Any template in your
 javascript assets folder with extention `handlebars` or `hbs` will be availabel in ember.
@@ -74,10 +70,7 @@ In your javascript asset manifest (app/assets/javascripts/application.js) add th
 
 And any of the following you want to include:
 
-    //= require ember-datetime
     //= require ember-data
-    //= require ember-routing
-    //= require ember-i18n
 
 In your stylesheet asset manifest (app/assets/stylesheets/application.css) add the following:
 
@@ -91,6 +84,7 @@ ChangeLog
 0.13.0
 
 * new preprocessor for "javascript native require" (WIP)
+* remove legacy packages
 
 0.12.1
 

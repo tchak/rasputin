@@ -10,7 +10,7 @@ module Rasputin
           (\#\#\# (?m:.*?) \#\#\#) |
           (\/\/ .* \n?)+ |
           (\# .* \n?)+ |
-          (#{REQUIRE_PATTERN}\n?)
+          (#{REQUIRE_PATTERN} \n?)+
         )
       )+
     /x
@@ -62,7 +62,7 @@ module Rasputin
     end
 
     def processed_source
-      @processed_source ||= processed_header + body
+      @processed_source ||= processed_header + "\n" + body
     end
 
     def directives
@@ -118,7 +118,7 @@ module Rasputin
         # The path must be absolute.
         raise ArgumentError, "require_directory argument must be absolute path"
       else
-        root = path
+        root = Pathname.new(path)
 
         unless (stats = stat(root)) && stats.directory?
           raise ArgumentError, "require_directory argument must be a directory"
@@ -143,7 +143,7 @@ module Rasputin
         # The path must be absolute.
         raise ArgumentError, "require_tree argument must be absolute path"
       else
-        root = path
+        root = Pathname.new(path)
 
         unless (stats = stat(root)) && stats.directory?
           raise ArgumentError, "require_tree argument must be a directory"
