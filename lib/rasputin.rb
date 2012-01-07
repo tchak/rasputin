@@ -19,7 +19,7 @@ module Rasputin
     config.rasputin.use_javascript_require = true
     config.rasputin.strip_javascript_require = true
 
-    initializer :setup_rasputin do |app|
+    initializer :setup_rasputin, :group => :all do |app|
       app.assets.register_preprocessor 'application/javascript', Rasputin::RequirePreprocessor
       app.assets.register_engine '.handlebars', Rasputin::HandlebarsTemplate
       app.assets.register_engine '.hbs', Rasputin::HandlebarsTemplate
