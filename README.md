@@ -81,6 +81,11 @@ In your stylesheet asset manifest (app/assets/stylesheets/application.css) add t
 ChangeLog
 ----------
 
+0.13.1
+
+* fix to ensure rasputin is initialized in all groups (thanks @chrisconley)
+* update ember-data
+
 0.13.0
 
 * new preprocessor for "javascript native require" (WIP)
