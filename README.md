@@ -1,15 +1,15 @@
 Rasputin
 ========
 
-This is a gem for integration of Ember.js with Rails 3.1 assets pipeline.
+Rasputin integrates Ember.js with Rails 3.1 assets pipeline.
 
-It provide direct requires for following ember packages :
+It requires the following ember packages :
 
 * ember
 * ember-data
 
-Rasputin also provide sprockets engine for handlebars templates. Any template in your
-javascript assets folder with extention `handlebars` or `hbs` will be availabel in ember.
+Rasputin also provide a sprockets engine for handlebars templates. Any template in your
+javascript assets folder with extension `handlebars` or `hbs` will be available in ember.
 
 Examples :
 
@@ -27,7 +27,7 @@ Precompilation :
 
 Starting with 0.9.0 release, Rasputin will precompile your handlebars templates.
 Starting with 0.12.1 release, default behavior is to precompile templates only in production environment.
-If you do not want this behavior you can tourn it off in your rails configuration block :
+If you don't want this behavior you can turn it off in your rails configuration block :
 
     config.rasputin.precompile_handlebars = false
 
@@ -51,7 +51,7 @@ If you chouse to use "javascript native require" your application.js file will l
     require('ember-data');
     require('app/**/*');
 
-Ther is two new settings :
+There is two new settings :
 
     config.rasputin.use_javascript_require = true
     config.rasputin.strip_javascript_require = true
@@ -63,7 +63,7 @@ In Gemfile:
 
     gem 'rasputin'
 
-In your javascript asset manifest (app/assets/javascripts/application.js) add the following:
+In your javascript assets manifest (app/assets/javascripts/application.js) add the following:
 
     //= require jquery
     //= require ember
@@ -72,7 +72,7 @@ And any of the following you want to include:
 
     //= require ember-data
 
-In your stylesheet asset manifest (app/assets/stylesheets/application.css) add the following:
+In your stylesheet assets manifest (app/assets/stylesheets/application.css) add the following:
 
     /*
      * = require normalize
