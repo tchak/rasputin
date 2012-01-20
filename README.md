@@ -81,6 +81,10 @@ In your stylesheet assets manifest (app/assets/stylesheets/application.css) add 
 ChangeLog
 ----------
 
+0.13.2
+
+* Rails 3.2 support
+
 0.13.1
 
 * fix to ensure rasputin is initialized in all groups (thanks @chrisconley)
