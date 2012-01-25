@@ -45,7 +45,7 @@ module Rasputin
 
       def compile(template)
         template = template.read if template.respond_to?(:read)
-        Source.context.call("EmberHandlebars.precompile", template)
+        Source.context.call("precompileEmberHandlebars", template)
       end
     end
   end

@@ -25,8 +25,7 @@ The new default is '/'
 
 Precompilation :
 
-Starting with 0.9.0 release, Rasputin will precompile your handlebars templates.
-Starting with 0.12.1 release, default behavior is to precompile templates only in production environment.
+Rasputin can precompile your handlebars templates. Default behavior is to precompile templates only in production environment.
 If you don't want this behavior you can turn it off in your rails configuration block :
 
     config.rasputin.precompile_handlebars = false
@@ -72,14 +71,12 @@ And any of the following you want to include:
 
     //= require ember-data
 
-In your stylesheet assets manifest (app/assets/stylesheets/application.css) add the following:
-
-    /*
-     * = require normalize
-     */
-
 ChangeLog
 ----------
+
+0.14.0
+
+* Update to Ember.js 0.9.4
 
 0.13.2
 
