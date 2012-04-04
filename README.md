@@ -74,6 +74,10 @@ And any of the following you want to include:
 ChangeLog
 ----------
 
+0.15.0
+
+* Update to Ember.js 0.9.6
+
 0.14.1
 
 * Precompilation fix
