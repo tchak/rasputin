@@ -20,6 +20,7 @@ module Rasputin
     def template_path(path)
       path = path.split('/')
       path.delete('templates')
+      path.map!(&Rails.configuration.rasputin.template_name_proc) if Rails.configuration.rasputin.template_name_proc
       path.join(Rails.configuration.rasputin.template_name_separator)
     end
 
