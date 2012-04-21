@@ -1,6 +1,14 @@
 Rasputin
 ========
 
+# WARNING
+Most of the features from rasputin were merged in to official [ember-rails](https://github.com/emberjs/ember-rails) gem.
+I will discontinu support to all the ember related stuff in rasputin.
+You should start to migrate to [ember-rails](https://github.com/emberjs/ember-rails).
+The sprocket extention to use `require` is going to stay in rasputin.
+
+
+
 Rasputin integrates Ember.js with Rails 3.1 assets pipeline.
 
 It requires the following ember packages :
