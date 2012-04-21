@@ -19,7 +19,8 @@ module Rasputin
     
     def template_path(path)
       path = path.split('/')
-      path.delete('templates')
+      exclusions = Array.wrap(Rails.configuration.rasputin.path_exclusions).compact.concat(["templates"])
+      path.reject! { |name| exclusions.include?(name) }
       path.join(Rails.configuration.rasputin.template_name_separator)
     end
 
