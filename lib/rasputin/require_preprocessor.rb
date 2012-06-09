@@ -24,10 +24,10 @@ module Rasputin
     def prepare
       @pathname = Pathname.new(file)
 
-      @use_javascript_require = Rails.configuration.rasputin.use_javascript_require
-      @strip_javascript_require = Rails.configuration.rasputin.strip_javascript_require
+      @enable = Rails.configuration.rasputin.enable
+      @strip_require_directives = Rails.configuration.rasputin.strip_require_directives
 
-      if @use_javascript_require
+      if @enable
         @header = data[HEADER_PATTERN, 0] || ""
         @body   = $' || data
         # Ensure body ends in a new line
@@ -38,7 +38,7 @@ module Rasputin
     end
 
     def evaluate(context, locals, &block)
-      if @use_javascript_require
+      if @enable
         @context = context
         process_directives
 
@@ -49,7 +49,7 @@ module Rasputin
     end
 
     def processed_header
-      if @use_javascript_require && @strip_javascript_require
+      if @enable && @strip_require_directives
         lineno = 0
         @processed_header ||= header.lines.map { |line|
           lineno += 1

@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'railties', '~> 3.1'
   s.add_runtime_dependency 'actionpack', '~> 3.1'
   s.add_runtime_dependency 'sprockets', '~> 2.0'
-  s.add_runtime_dependency 'jquery-rails', '>= 1.0'
 
   s.files         = `git ls-files`.split("\n")
   #s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
